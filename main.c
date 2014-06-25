@@ -105,9 +105,9 @@ int main(int argc, char *argv[])
     
 #if !defined (DEBUG_POLYDIV) && !defined (DEBUG_PARFRAC) &&!defined (DEBUG_VECTOR_GEN) && !defined (DEBUG_MEMORIA)
     //inicio
-    printf("\n\t Decomp_nparametrica: Aplicativo para realizacao de decomposicao nao-parametrica\n\r\t em equacoes a serem implementadas em circuito translinear.\n\r \
-        Insira abaixo a equacao do polinomio desejado (100 caracteres no maximo). Os escalares deverao ser apenas \n\r\t numeros inteiros. Exemplo:\n\r\t \
-        x^3 + x^2*y - x*z^2 + y*z^2\n\r  (tecle enter para utiliza-lo)");
+    printf("NParametricTLDecomp  Copyright (C) 2014  Diogo Andrade \nThis program comes with ABSOLUTELY NO WARRANTY.\nThis is free software, and you are welcome to redistribute it under certain conditions.\n\nThis application performs non-parametric Translinear decomposition onto a homogeneous (all monomials having the same degree) multivariate polynomial.\nThe results are suitable for Translinear analog circuit realization with proper adjustments.\nIf an error occurs, send a brief description with the polynomial inserted to diogo007@gmail.com.\n\r \
+        Below, type the polynomial to be decomposed (100 characters maximum). Coefficients should be only integer numbers. \n\r\t Example:\n\r\t \
+        x^3 + x^2*y - x*z^2 + y*z^2\n\r  (Hit \"enter\" to use it)");
    
     //leitura da string de entrada
     
@@ -136,8 +136,8 @@ int main(int argc, char *argv[])
     //teste da divisao polinomial
 #if defined (DEBUG_POLYDIV)
     //polinomio numerador
-    //sprintf(equacao_entrada, "(-2*Iin-Iout+I0)*(Iin+I0)");
-    sprintf(equacao_entrada, "3*a+b^2");
+    sprintf(equacao_entrada, "-3*X+3*Y");
+    //sprintf(equacao_entrada, "X^3 + X^2*Y - X*Z^2 + Y*Z^2");
     
 #endif
     
@@ -207,7 +207,7 @@ int main(int argc, char *argv[])
 #if defined (DEBUG_POLYDIV) 
     //polinomio denominador
     //sprintf(divisor_entrada, "2*Iin+I0");
-    sprintf(divisor_entrada, " a^2+a*b");
+    sprintf(divisor_entrada, " -X+Y");
     token_divisor = le_tokens(divisor_entrada);
     constroi_tabela_literais(&lista_literais, token_divisor);
     expressao_RPN_divisor = constroi_lista_expr(token_divisor);    
@@ -577,7 +577,7 @@ getchar();
     polinomio_base = gera_polinomio_base(lista_literais);
     
     //leitura dos limites superiores e inferiores dos coeficientes
-    printf("\n Insira o limite inferior de coeficientes a serem utilizados (padrao -1)");
+    printf("\n Insert the inferior limit of variables coefficients (standard -1))");
     if ( fgets (equacao_entrada, 100 , stdin) == NULL )
     {
         erro(ERRO_002);
@@ -594,7 +594,7 @@ getchar();
     }
     
     //limite superior
-    printf("\n Insira o limite superior de coeficientes a serem utilizados (padrao +1)");
+    printf("\n Insert the superior limit of variables coefficients (standard +1)");
     if ( fgets (equacao_entrada, 100 , stdin) == NULL )
     {
         erro(ERRO_002);
@@ -611,12 +611,12 @@ getchar();
     }
     
     //imprimir os parametros colhidos
-    printf("\n equacao:");
+    printf("\n Expanded, simplified and re-ordered Polynomial:");
     imprime_lista_expr_expandida(expr_simplificada, lista_literais);
-    printf("\n limite inferior: %d", lim_inferior);
-    printf("\n limite superior: %d", lim_superior);
+    printf("\n coefficient inferior limit: %d", lim_inferior);
+    printf("\n coefficient superior limit: %d", lim_superior);
     
-    printf("\n pressione qualquer tecla para continuar...\n");
+    printf("\n Press any key to continue...\n");
     getchar();
     
     //construcao dos vetores, aqui com coeficientes especificados pelo usuario
@@ -640,8 +640,8 @@ getchar();
         // printf("\n");
         percorre_polinomios = percorre_polinomios->proximo_polinomio;
     }
-    printf("\n numero de polinomios base total eh: %d",contador);
-    printf("\n pressione qualquer tecla para continuar...\n");
+    printf("\n Total number of Base-Polynomials generated is: %d",contador);
+    printf("\n Press any key to continue...\n");
     getchar();
 
 
@@ -662,8 +662,8 @@ getchar();
         // printf("\n");
         percorre_polinomios = percorre_polinomios->proximo_polinomio;
     }
-    printf("\n numero de polinomios base apos eliminar negativos sao: %d",contador);
-    printf("\n pressione qualquer tecla para continuar...\n");
+    printf("\n Number of Base-Polynomials after removing strict negative BP's is: %d",contador);
+    printf("\n Press any key to continue...\n");
     getchar();
 
     //elimina os polinomios redundantes
@@ -680,24 +680,8 @@ getchar();
         // printf("\n");
         percorre_polinomios = percorre_polinomios->proximo_polinomio;
     }
-    printf("\n numero de polinomios base apos eliminar redundantes sao: %d",contador);
-    printf("\n pressione qualquer tecla para continuar...\n");
-    getchar();
-
-//inserir aqui a remocao de polinomios que nao podem fazer parte de uma decomp
-    //imprime as combina›es
-   // printf("\nOs vetores gerados sao:\n");
-    percorre_polinomios = lista_polinomios;
-    contador = 0;
-    while (percorre_polinomios != NULL) 
-    {
-        contador++;
-       // imprime_lista_expr_expandida(percorre_polinomios->polinomio, lista_literais);
-       // printf("\n");
-        percorre_polinomios = percorre_polinomios->proximo_polinomio;
-    } 
-    printf("\n numero de polinomios base gerados: %d",contador);
-    printf("\n pressione qualquer tecla para continuar...\n");
+    printf("\n Number of Base-Polynomials after redundancy removal (set T1) is: %d",contador);
+    printf("\n Press any key to continue...\n");
     getchar();
     
     //gerar as sementes 
@@ -713,8 +697,8 @@ getchar();
         // printf("\n");
         percorre_sementes = percorre_sementes->conjunto_prox;
     }
-    printf("\n numero de pares de polinomios base gerados: %d",contador2);
-    printf("\n pressione qualquer tecla para continuar...\n");
+    printf("\n Number of Base-Polynomial pairs (T2 set) is: %d",contador2);
+    printf("\n Press any key to continue...\n");
     getchar();
 
 //calculo do pior caso para o meu algoritmo
@@ -724,13 +708,13 @@ for(lim_inferior=contador2;lim_inferior>=1;lim_inferior--)
     lim_superior += lim_inferior;
 }
 
-printf("\n numero de pior caso de combinacoes meu algoritmo e: %d",lim_superior);
+printf("\n Worst case number of attempts using this alfgorithm is: %d",lim_superior);
 
 //calculo de pior caso para o mulden
 
 lim_superior = contador2*(contador - 1)*2;
-printf("\n numero de pior caso de combinacoes para mulder e: %d",lim_superior);
-printf("\n pressione qualquer tecla para continuar...\n");
+printf("\n Worst case number of attempts using Mulder's agorithm is: %d",lim_superior);
+printf("\n Press any key to continue...\n");
 getchar();
     //calcula o numero total de testes a serem feitos
     //encontra_decomp_dummie(lista_sementes, deg(expr_simplificada));
@@ -764,7 +748,7 @@ getchar();
     destroi_arvore_expr(arvore);
     destroi_lista_expr(expressao_RPN);
     destroi_lista_expr_expandida(expr_simplificada);
-printf("\npressione qualquer tecla para continuar...");
+printf("\nPress any key to continue...");
 getchar();
     return 0;
 }

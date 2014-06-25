@@ -2953,6 +2953,9 @@ vetor_polinomios *remove_polinomios_redundantes (vetor_polinomios *vetor_entrada
     vetor_polinomios *p_vetor1, *p_vetor2;
     lista_expr *expr1, *expr2, *Q, *R;
     
+    int flag = 0;
+  //  int bogus;
+    
     //inicializo o ponteiro de varredura
     p_vetor1 = vetor_entrada;
     
@@ -2962,22 +2965,46 @@ vetor_polinomios *remove_polinomios_redundantes (vetor_polinomios *vetor_entrada
     //para cada vetor, eu divido ele por todos os outros polinomoios. se o resto da zero, Ž porque um Ž combinacao linear do outro
     while (p_vetor1->proximo_polinomio != NULL) 
     {
+        flag = 0;
+
         p_vetor2 = p_vetor1->proximo_polinomio;
         while (p_vetor2 != NULL) 
         {
+            // pula caso os polinomios forem os mesmos
+            if (p_vetor2 == p_vetor1)
+            {
+                p_vetor2 = p_vetor2->proximo_polinomio;
+                continue;
+            }
             //copio a expressao de vetor1
             expr1 = copia_lista_expr(p_vetor1->polinomio->P);
             //copio a expressao de vetor2
             expr2 = copia_lista_expr(p_vetor2->polinomio->P);
             
-            //divido os dois
+             //divido os dois
             polydiv(expr1, expr2, &Q, &R);
             
-            //se o resto for 0, e o quociente for uma constante, devo remover p_vetor_2
-            if (R->parametro == 0.0 && Q->codigos_numerador == NULL) 
+            //seo resto for 0, e o quociente for uma constante, devo remover p_vetor_1
+            //bogus = (int)(R->parametro);
+            if ((R->parametro == 0.0) && Q->codigos_numerador == NULL)
             {
-                //p_vetor2 apontar‡ para o polinomio anterior, logo nao h‡ problema em incrementarmos o ponteiro log a seguir
-                p_vetor2 = remove_polinomio(p_vetor2);
+                //devide se remove vetor1 ou vetor2
+                if (fabs(Q->parametro) >= 1.0)
+                {
+                    //p_vetor1 apontar‡ para o proximo da lista apos ser removido
+                    p_vetor1 = remove_polinomio(p_vetor1);
+                    //retoma a busca a partir do proximo polinomio principal
+                    p_vetor2 = NULL;
+                    
+                    //seta flag de reinicio
+                    flag = 1;
+                }
+                else
+                {
+                    //p_vetor1 apontar‡ para o proximo da lista apos ser removido
+                    p_vetor2 = remove_polinomio(p_vetor2);
+                }
+                
             }
             
             //destruo expr
@@ -2993,11 +3020,17 @@ vetor_polinomios *remove_polinomios_redundantes (vetor_polinomios *vetor_entrada
                 p_vetor2 = p_vetor2->proximo_polinomio;
         }
         
-        //incremento a busca principal
-        if (p_vetor1->proximo_polinomio!= NULL) 
-            p_vetor1 = p_vetor1->proximo_polinomio;
-        else
-            break;
+        //testa flag de reinicio
+        if (!flag)
+        {
+            //incremento a busca principal
+            if (p_vetor1->proximo_polinomio!= NULL)
+                p_vetor1 = p_vetor1->proximo_polinomio;
+            else
+                break;
+            
+        }
+       
         
     } 
     
@@ -3424,7 +3457,7 @@ vetor_decomp *encontra_decomp(vetor_sementes *entrada, int grau, lista_expr *exp
             lista_decomp = lista_decomp->ant_decomp;
     
     //imprimir numero de decomposicoes
-    printf("\n\n o numero de decoposicoes validas: %d", total_decomp);
+    printf("\n\nThe number of valid Translinear decompositions found is: %d", total_decomp);
     
     //retornar
     return lista_decomp;
@@ -3627,6 +3660,26 @@ void encontra_decomp_recursiva(vetor_decomp *primario, vetor_decomp *secundario,
                             decomp_atual->poly_pares = ordena_polinomios(decomp_atual->poly_pares);
                             decomp_atual->poly_impares = ordena_polinomios(decomp_atual->poly_impares);
                             
+                            //normalizar os restos->para
+                            if (fabs(decomp_atual->resto_par->parametro) >= fabs(decomp_atual->resto_impar->parametro))
+                            {
+                                decomp_atual->resto_par->parametro = decomp_atual->resto_par->parametro/decomp_atual->resto_impar->parametro;
+                                decomp_atual->resto_impar->parametro = 1.0;
+                                
+                            }
+                            else
+                            {
+                                decomp_atual->resto_impar->parametro = decomp_atual->resto_impar->parametro/decomp_atual->resto_par->parametro;
+                                decomp_atual->resto_par->parametro = 1.0;
+                            }
+                            
+                            //alterar sinais para melhor impressao de resultados, priorizando resto par ser positivo:
+                            if (decomp_atual->resto_par->parametro < 0.0)
+                            {
+                                decomp_atual->resto_par->parametro*= -1.0;
+                                decomp_atual->resto_impar->parametro*= -1.0;
+                            }
+                            
                             //procuro por uma decomposicao equivalente no vetor de retorno
                             ptr_decomp = *retorno;
                             
@@ -3768,6 +3821,27 @@ void encontra_decomp_recursiva(vetor_decomp *primario, vetor_decomp *secundario,
                             decomp_atual->poly_pares = ordena_polinomios(decomp_atual->poly_pares);
                             decomp_atual->poly_impares = ordena_polinomios(decomp_atual->poly_impares);
                             
+                            
+                            //normalizar os restos->para
+                            if (fabs(decomp_atual->resto_par->parametro) >= fabs(decomp_atual->resto_impar->parametro))
+                            {
+                                decomp_atual->resto_par->parametro = decomp_atual->resto_par->parametro/decomp_atual->resto_impar->parametro;
+                                decomp_atual->resto_impar->parametro = 1.0;
+                                
+                            }
+                            else
+                            {
+                                decomp_atual->resto_impar->parametro = decomp_atual->resto_impar->parametro/decomp_atual->resto_par->parametro;
+                                decomp_atual->resto_par->parametro = 1.0;
+                            }
+                            
+                            //alterar sinais para melhor impressao de resultados, priorizando resto par ser positivo:
+                            if (decomp_atual->resto_par->parametro < 0.0)
+                            {
+                                decomp_atual->resto_par->parametro*= -1.0;
+                                decomp_atual->resto_impar->parametro*= -1.0;
+                            }
+
                             //procuro por uma decomposicao equivalente no vetor de retorno
                             ptr_decomp = *retorno;
                             
@@ -3941,7 +4015,7 @@ void imprime_decomposicao(vetor_decomp *decomposicao, tabela_literais *lista_lit
 {
     vetor_polinomios *percorre_polinomios;
     
-    printf("\n %+3f*",decomposicao->resto_par->parametro);
+    printf("\n %+3.2f*",decomposicao->resto_par->parametro);
     percorre_polinomios = decomposicao->poly_impares;
     while (percorre_polinomios!= NULL) 
     {
@@ -3951,7 +4025,7 @@ void imprime_decomposicao(vetor_decomp *decomposicao, tabela_literais *lista_lit
         percorre_polinomios = percorre_polinomios->proximo_polinomio;
     }
     
-    printf(" %+3f*",decomposicao->resto_impar->parametro);
+    printf(" %+3.2f*",decomposicao->resto_impar->parametro);
     percorre_polinomios = decomposicao->poly_pares;
     while (percorre_polinomios!= NULL) 
     {
