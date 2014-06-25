@@ -684,6 +684,7 @@ getchar();
     printf("\n pressione qualquer tecla para continuar...\n");
     getchar();
 
+//inserir aqui a remocao de polinomios que nao podem fazer parte de uma decomp
     //imprime as combinações
    // printf("\nOs vetores gerados sao:\n");
     percorre_polinomios = lista_polinomios;

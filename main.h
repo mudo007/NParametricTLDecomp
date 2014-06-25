@@ -2731,6 +2731,7 @@ vetor_polinomios *gera_vetor(vetor_polinomios *ultimo_gerado, lista_expr *polino
                     ultimo_gerado->proximo_polinomio = elemento_atual;
                     elemento_atual->polinomio_anterior = ultimo_gerado;
                     ultimo_gerado = elemento_atual;
+                    ultimo_gerado->proximo_polinomio = NULL;
                 }
                 else 
                 {
