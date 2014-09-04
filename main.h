@@ -27,6 +27,8 @@
 #include <string.h>
 #include <math.h>
 #include <ctype.h>
+#include <time.h>
+
 
 //defini‹o de debug
 //#define DEBUG_LEXICO
@@ -106,6 +108,7 @@ typedef struct _polinomio
 {
     lista_expr *P;
     int         id;
+    int         flag_approved;
     
 }polinomio;
 
@@ -147,8 +150,78 @@ typedef struct _vetor_decomp
     
 } vetor_decomp;
 
+//estrutura que guarda decomposicoes parciais encontradas ao executar o algoritmo do mulder
+typedef struct _vetor_decomp_simple
+{
+    vetor_polinomios *polinomios;
+    lista_expr *resto;
+    
+    struct _vetor_decomp_simple *prox_decomp;
+    struct _vetor_decomp_simple *ant_decomp;
+    
+} vetor_decomp_simple;
+
+
+//estruturas de dados para o algoritmo novo
+//apenas a lista de id's de polinomios que um polin™mio-base se correlaciona
+typedef struct _vetor_id_polinomios
+{
+    int id_polinomio;
+    
+    struct _vetor_id_polinomios *prox_poly;
+    struct _vetor_id_polinomios *ant_poly;
+    
+} vetor_id_polinomios;
+//vetor de correla‹o entr cada polinomio-base e todos os que podem, junto ocm ele, fazer parte de uma decomposi‹o opostamente conectados.
+typedef struct _vetor_correlacao_direta
+{
+    
+    int id_polinomio_base;
+    vetor_id_polinomios *poly_correlatos;
+    
+    struct _vetor_correlacao_direta *prox_corr;
+    struct _vetor_correlacao_direta *ant_corr;
+    
+} vetor_correlacao_direta;
+//apenas um agrupamento de "r" polinomios que se correlaciona com outro
+typedef struct _vetor_decomp_parcial
+{
+	int id_decomposicao_parcial;
+    vetor_id_polinomios *id_poly_decomp_parcial;
+    vetor_id_polinomios *id_polinomios_base;
+    
+	vetor_polinomios	*polys_decomp_parcial;
+    
+    struct vetor_decomp_parcial *prox_decomp_parcial;
+    struct vetor_decomp_parcial *ant_decomp_parcial;
+    
+} vetor_decomp_parcial;
+//vetor de correla‹o inversa. Cada grupo de polin™mios gerado pela correla‹o inversa se correlaciona com os polin™mios que os originaram
+typedef struct _vetor_correlacao_decomps
+{
+    
+    vetor_decomp_parcial *originaria;
+	vetor_decomp_parcial *derivadas;
+    
+    struct vetor_correlacao_direta *prox_corr;
+    struct vetor_correlacao_direta *ant_corr;
+    
+} vetor_correlacao_decomps;
+
+//tempo
+typedef struct _tempo
+{
+    unsigned long int dias;
+    unsigned int horas;
+    unsigned long int segundos;
+    unsigned int minutos;
+} tempo;
+
+//globais
 //variavel global para debug
 int global = 0;
+//contador de fra›es parciais executadas
+unsigned int global_num_parfrac = 0;
 
 //defini›es para a struct
 
@@ -235,6 +308,9 @@ vetor_polinomios *remove_polinomio_retorna_anteror(vetor_polinomios *);
 lista_expr *gera_polinomio_base(tabela_literais *);
 vetor_polinomios *remove_polinomios_negativos (vetor_polinomios *);
 vetor_polinomios *remove_polinomios_redundantes (vetor_polinomios *);
+vetor_polinomios *reconta_polinomios(vetor_sementes *,vetor_polinomios *);
+vetor_polinomios *remove_polinomios_nao_pertencentes(vetor_decomp *,vetor_polinomios *);
+
 
 //prototipo das funcoes que implementam o algoritmo propriamente dito
 int deg(lista_expr *);
@@ -258,17 +334,33 @@ void elimina_decomp_redundantes(vetor_decomp *);
 vetor_polinomios *ordena_polinomios(vetor_polinomios *);
 int compara_decomp(vetor_decomp *, vetor_decomp *);
 
+//funcoes que implementam o algoritmo do mulder
+void combina_decomp_mulder(vetor_decomp_simple *, vetor_decomp_simple *,polinomio *, polinomio *, lista_expr *, vetor_decomp **, int *, tabela_literais *);
+vetor_decomp *encontra_decomp_mulder(vetor_polinomios *, int , lista_expr *, tabela_literais *);
+void encontra_decomp_parcial(vetor_decomp_simple *, polinomio *, lista_expr *, vetor_polinomios *, int grau, vetor_decomp_simple **);
+vetor_decomp_simple *copia_decomp_simples(vetor_decomp_simple *);
+vetor_decomp_simple *novo_vetor_decomp_simples(void);
+vetor_decomp_simple *insere_decomp_simples(vetor_decomp_simple *, vetor_decomp_simple *);
+void destroi_decomp_simples(vetor_decomp_simple *);
+vetor_decomp_simple *novo_vetor_decomp_simples(void);
+void destroi_vetor_decomp_simples(vetor_decomp_simple *);
+
+//fun›es experimentais do algoritmo do mulder memory safe
+void encontra_decomp_parcial_primaria(vetor_decomp_simple *, polinomio *, lista_expr *, polinomio *, lista_expr *, vetor_polinomios *, int , vetor_decomp **, int *,tabela_literais *, lista_expr *);
+void encontra_decomp_parcial_secundaria(vetor_decomp_simple *, polinomio *, lista_expr *, vetor_polinomios *, int , vetor_decomp **, vetor_decomp_simple *, polinomio *base_primario, int *,tabela_literais *, lista_expr *);
+
+//fun›es do algoritmo de corre;la‹o
+vetor_sementes *ordena_vetor_semente(vetor_sementes *);
+void imprime_correlacoes_diretas(vetor_correlacao_direta *);
+void insere_id_polinomios_correlatos(vetor_correlacao_direta *, int );
+vetor_correlacao_direta *novo_vetor_correlacao_direta(void);
+vetor_correlacao_direta *constroi_correlacao_direta(vetor_sementes *);
+
+
 //funcoes de tamanho de memoria
 int decomp_size(vetor_decomp *);
 int poly_size(vetor_polinomios *);
 int expr_size(lista_expr *);
-
-//funcoes de contagem
-void encontra_decomp_dummie(vetor_sementes *, int);
-void encontra_decomp_recursiva_dummie(vetor_decomp *, vetor_decomp *, int , int *, int);
-void encontra_decomp_dummie_mulder(vetor_sementes *,vetor_polinomios *, int);
-void encontra_decomp_recursiva_dummie_mulder(vetor_decomp *, vetor_polinomios *, int , int *, int);
-
 
 
 
@@ -1551,7 +1643,9 @@ void imprime_lista_expr_expandida(lista_expr *lista, tabela_literais *tabela)
             if ((teste = (int)p_lista->parametro - p_lista->parametro) == 0.0)
                 printf("%d",(int)(p_lista->parametro));
             else
+            {
                 printf("%2.2f",p_lista->parametro);
+            }
 
         
         //imprime o numerador
@@ -2381,6 +2475,9 @@ int partial_fraction_expansion(lista_expr *P3, lista_expr *P1, lista_expr *P2, l
     *quociente = NULL;
     resto = NULL;
     
+    //incrementa o numero de fracoes parciais executadas, para comparaca de performance
+    global_num_parfrac++;
+    
     //primeiro: dividir P3 por P1*P2 e guardar o Quociente
 
     //multiplica-se P1 e P2
@@ -2725,6 +2822,9 @@ vetor_polinomios *gera_vetor(vetor_polinomios *ultimo_gerado, lista_expr *polino
                 elemento_atual->polinomio->id = poly_id;
                 poly_id++;
                 
+                //initialize the approval flag for further BP set reduction purposes
+                elemento_atual->polinomio->flag_approved = 0;
+                
                 //concateno na lista de polinomios
                 if (ultimo_gerado != NULL) 
                 {
@@ -3030,8 +3130,6 @@ vetor_polinomios *remove_polinomios_redundantes (vetor_polinomios *vetor_entrada
                 break;
             
         }
-       
-        
     } 
     
     //rebobina o vetor reduizdo
@@ -3072,7 +3170,7 @@ int deg(lista_expr *poly_in)
 
 vetor_sementes *gera_vetor_semente(vetor_polinomios *vetor_in, lista_expr *eq_entrada)
 {
-    vetor_polinomios *ptr_vetor_in = vetor_in->proximo_polinomio;
+    vetor_polinomios *ptr_vetor_in;
     vetor_polinomios *ptr_vetor_base = vetor_in;
     vetor_sementes *vetor_gerado = NULL;
     
@@ -3082,10 +3180,17 @@ vetor_sementes *gera_vetor_semente(vetor_polinomios *vetor_in, lista_expr *eq_en
     lista_expr *Q;
     
     //se por um acaso passar apenas um elemento, retornar nulo
-    if (ptr_vetor_in == NULL)
+    if (vetor_in == NULL)
     {
         return NULL;
     }
+    if (vetor_in->proximo_polinomio == NULL)
+    {
+        return NULL;
+    }
+    
+    ptr_vetor_in = vetor_in->proximo_polinomio;
+
     //percorre o vetor de entrada, tentando todas as combina›es poss’veis. Como a ordem n‹o importa, vou sempre incrementando vetor_in tambŽm
     while (ptr_vetor_base->proximo_polinomio != NULL) 
     {
@@ -3286,12 +3391,14 @@ void destroi_vetor_decomp(vetor_decomp *entrada)
 //tirar a prova real entre a decomposi‹o encontrada e a equa‹o de entrada
 int prova_real(vetor_decomp *decomp, lista_expr *eq_entrada)
 {
-    lista_expr *acum_par, *acum_impar, *acum, *eq_entrada_copia;
+    lista_expr *acum_par, *acum_impar, *acum, *acum2, *Q, *R;
     vetor_polinomios *poly_par_ptr = decomp->poly_pares;
     vetor_polinomios *poly_impar_ptr = decomp->poly_impares;
+    int flag_teste;
     
     acum_par = copia_lista_expr(poly_par_ptr->polinomio->P);
     acum_impar = copia_lista_expr(poly_impar_ptr->polinomio->P);
+    
     
     while (poly_par_ptr->proximo_polinomio!= NULL)
     {
@@ -3301,11 +3408,6 @@ int prova_real(vetor_decomp *decomp, lista_expr *eq_entrada)
         
         poly_par_ptr = poly_par_ptr->proximo_polinomio;
     }
-    
-    //multiplico o resultado pelo lambda, 
-    acum = multiplica_expr(acum_par, decomp->resto_impar);
-    destroi_lista_expr_expandida(acum_par);
-    acum_par = acum;
     
     //repito o mesmo para a parte impar
     while (poly_impar_ptr->proximo_polinomio!= NULL)
@@ -3317,15 +3419,173 @@ int prova_real(vetor_decomp *decomp, lista_expr *eq_entrada)
         poly_impar_ptr = poly_impar_ptr->proximo_polinomio;
     }
     
-    //multiplico o resultado pelo lambda
-    acum = multiplica_expr(acum_impar, decomp->resto_par);
+    //simplifica a parte par
+    acum = simplifica_expr_expandida(acum_par);
+    destroi_lista_expr_expandida(acum_par);
+    acum = lexdegbubblesort(acum);
+    acum_par = acum;
+    acum = NULL;
+    
+    //simplifica a parte impar
+    acum = simplifica_expr_expandida(acum_impar);
     destroi_lista_expr_expandida(acum_impar);
+    acum = lexdegbubblesort(acum);
     acum_impar = acum;
+    acum = NULL;
+
     
+    //multiplico o resultado pelo lambda, se for diferente de zero. Caso contr‡rio, temos que dividir a eq_entrada pelo acumulado
+    if (decomp->resto_impar->parametro == 0.0 || decomp->resto_par->parametro == 0.0 ||
+        decomp->resto_impar->parametro == NAN || decomp->resto_par->parametro == NAN ||
+        decomp->resto_impar->parametro == INFINITY || decomp->resto_par->parametro == INFINITY)
+    {
+        //Divido Er por polys impares, e Acum = R e acum2 = Q
+        polydiv(eq_entrada, acum_impar, &Q, &R);
+        acum = Q;
+        acum2 = R;
+        
+        //setar um flag para saber se o primeiro teste falhou
+        flag_teste = 0;
+        //verificar se Q Ž uma constante
+        if (Q->parametro != 0.0 && !isnan(Q->parametro) && !isinf(Q->parametro) && Q->codigos_numerador == NULL && Q->proximo == NULL)
+        {
+            Q = NULL;
+            R = NULL;
+            //Dividir o resto(acum2) por acum_par, se Q for uma constante, e R = 0, ent‹o decomp->resto_impar = Q, decomp->resto_par = acum
+            polydiv(acum2, acum_par, &Q, &R);
+            //verificar se Q Ž uma constante
+            if (Q->parametro != 0.0 && !isnan(Q->parametro) && !isinf(Q->parametro) && Q->codigos_numerador == NULL && Q->proximo == NULL && R->parametro == 0.0)
+            {
+                destroi_lista_expr_expandida(decomp->resto_impar);
+                destroi_lista_expr_expandida(decomp->resto_par);
+                decomp->resto_par = acum;
+                decomp->resto_impar = Q;
+
+            }
+            else
+            {
+                flag_teste = 1;
+                destroi_lista_expr_expandida(Q);
+                destroi_lista_expr_expandida(R);
+
+                
+            }
+        }
+        else
+        {
+            flag_teste = 1;
+            destroi_lista_expr_expandida(Q);
+            destroi_lista_expr_expandida(R);
+
+        }
+        Q = NULL;
+        R = NULL;
+        acum = NULL;
+        
+        
+        //se a primeira tentativa nao funcionar, fazer ao contr‡rio
+        if (flag_teste)
+        {
+            //Divido Er por polys pares, e Acum = R e acum2 = Q
+            polydiv(eq_entrada, acum_par, &Q, &R);
+            acum = Q;
+            acum2 = R;
+
+            //verificar se Q Ž uma constante
+            if (Q->parametro != 0.0 && !isnan(Q->parametro) && !isinf(Q->parametro) && Q->codigos_numerador == NULL && Q->proximo == NULL)
+            {
+                Q = NULL;
+                R = NULL;
+                //Dividir o resto(acum2) por acum_impar, se Q for uma constante, e R = 0, ent‹o decomp->resto_par = Q, decomp->resto_impar = acum
+                polydiv(acum2, acum_impar, &Q, &R);
+                //verificar se Q Ž uma constante
+                if (Q->parametro != 0.0 && !isnan(Q->parametro) && !isinf(Q->parametro) && Q->codigos_numerador == NULL && Q->proximo == NULL && R->parametro == 0.0)
+                {
+                    destroi_lista_expr_expandida(decomp->resto_impar);
+                    destroi_lista_expr_expandida(decomp->resto_par);
+                    decomp->resto_impar = acum;
+                    decomp->resto_par = Q;
+                }
+                else
+                {
+                    destroi_lista_expr_expandida(Q);
+                    destroi_lista_expr_expandida(R);
+                }
+
+            }
+            else
+            {
+                destroi_lista_expr_expandida(Q);
+                destroi_lista_expr_expandida(R);
+
+            }
+        }
+        Q = NULL;
+        R = NULL;
+        acum = NULL;
+        
+        
+    }
+    //se mesmo ap—s esta tentativa de encontrar coeficientes reais ainda tiver alguma inconsistencia, retornar 0
+    if (decomp->resto_impar->parametro == 0.0 || decomp->resto_par->parametro == 0.0 ||
+        decomp->resto_impar->parametro == NAN || decomp->resto_par->parametro == NAN ||
+        decomp->resto_impar->parametro == INFINITY || decomp->resto_par->parametro == INFINITY)
+    {
+        destroi_lista_expr_expandida(acum_impar);
+        destroi_lista_expr_expandida(acum_par);
+        return FALSE;
+    }
+    
+
+    //multiplico a parte par pelo lambda ’mpar
+    acum = multiplica_expr(acum_par,decomp->resto_impar);
+    destroi_lista_expr_expandida(acum_par);
+    acum_par = simplifica_expr_expandida(acum);
+    destroi_lista_expr_expandida(acum);
+    acum_par = lexdegbubblesort(acum_par);
+    acum = NULL;
+    
+    //multiplico a parte impar pelo lambda par
+    acum = multiplica_expr(acum_impar,decomp->resto_par);
+    destroi_lista_expr_expandida(acum_impar);
+    acum_impar = simplifica_expr_expandida(acum);
+    destroi_lista_expr_expandida(acum);
+    acum_impar = lexdegbubblesort(acum_impar);
+    acum = NULL;
+
     //somo a parte impar com a parte par
-    soma_expr(acum_impar, acum_par);
+    acum = copia_lista_expr(acum_impar);
+    acum2 = copia_lista_expr(acum_par);
+    soma_expr(acum, acum2);
     
-    //subtraio o resultado da equa‹o de entrada
+    //simplifica
+    acum2 = simplifica_expr_expandida(acum);
+    destroi_lista_expr_expandida(acum);
+    acum = lexdegbubblesort(acum2);
+    acum2 = NULL;
+    
+    //divido o resultado pela equacao de entrada, e o resto deve dar 0 e o quociente ser uma constante
+    polydiv(eq_entrada, acum, &Q, &R);
+    if (Q->codigos_numerador == NULL && R->codigos_numerador == NULL && R->parametro == 0.0 && !isnan(Q->parametro) && !isinf(Q->parametro) && Q->parametro != 0.0)
+    {
+        destroi_lista_expr_expandida(Q);
+        destroi_lista_expr_expandida(R);
+        destroi_lista_expr_expandida(acum_impar);
+        destroi_lista_expr_expandida(acum_par);
+        destroi_lista_expr_expandida(acum);
+        return TRUE;
+    }
+    else
+    {
+        destroi_lista_expr_expandida(Q);
+        destroi_lista_expr_expandida(R);
+        destroi_lista_expr_expandida(acum_impar);
+        destroi_lista_expr_expandida(acum_par);
+        destroi_lista_expr_expandida(acum);
+        return FALSE;
+    }
+    
+  /*  //subtraio o resultado da equa‹o de entrada
     eq_entrada_copia = copia_lista_expr(eq_entrada);
     
     subtrai_expr(&acum_impar, eq_entrada_copia);
@@ -3340,6 +3600,7 @@ int prova_real(vetor_decomp *decomp, lista_expr *eq_entrada)
         return TRUE;
     else 
         return FALSE;
+   */
     
 }
 
@@ -3388,6 +3649,11 @@ vetor_decomp *copia_vetor_semente(vetor_sementes *entrada)
     vetor_sementes *ptr_sementes;
     vetor_decomp   *ptr_decomp = NULL;
     vetor_decomp   *lista_decomp = NULL;
+    
+    if (entrada == NULL)
+    {
+        return NULL;
+    }
     
     ptr_sementes = entrada;
     while (ptr_sementes != NULL) 
@@ -3440,7 +3706,7 @@ vetor_decomp *encontra_decomp(vetor_sementes *entrada, int grau, lista_expr *exp
     while (decomp_referencia != NULL) 
     {
         //para cada vetor incial de decomp referencia, encontro todas as decomposicoes que possam ser geradas a partir dele
-        encontra_decomp_recursiva(decomp_referencia, decomp_referencia, &lista_decomp, grau, expr_simplificada, lista_literais, &total_decomp ); 
+        encontra_decomp_recursiva(decomp_referencia, decomp_referencia, &lista_decomp, grau, expr_simplificada, lista_literais, &total_decomp );
         
         //apagar o elemento testado e atualizar o ponteiro de referencia
         decomp_atual = decomp_referencia->prox_decomp;
@@ -3458,6 +3724,7 @@ vetor_decomp *encontra_decomp(vetor_sementes *entrada, int grau, lista_expr *exp
     
     //imprimir numero de decomposicoes
     printf("\n\nThe number of valid Translinear decompositions found is: %d", total_decomp);
+    printf("\n Number of partial fraction operations performed is: %d\n",global_num_parfrac);
     
     //retornar
     return lista_decomp;
@@ -3580,11 +3847,6 @@ int expr_size(lista_expr *entrada)
 }
 
 
-
-
-
-
-
 //Funcao que testa se um par de polinomios pode ser combinado com outro para formar uma decomposi‹o, retornando a decomposicao parcial
 void encontra_decomp_recursiva(vetor_decomp *primario, vetor_decomp *secundario, vetor_decomp **retorno, int grau, lista_expr *expr_simplificada, tabela_literais *lista_literais, int *total_decomp)
 {
@@ -3598,61 +3860,81 @@ void encontra_decomp_recursiva(vetor_decomp *primario, vetor_decomp *secundario,
     vetor_decomp *ptr_decomp = NULL;
     int contador = 0;
     int flag = 0;
+    int flag_first = 0;
+    int flag_continue = 0;
     
     //aponto para o inicio do vetor sementes
     ptr_sementes = secundario;
     
+    //inicializo a flag para pular a primeira decomposicao, que Ž de uma semente consigo mesma
+    flag_first = 1;
     //vou tentar combinar o primario com TODOS os elementos do secund‡rio
     while (ptr_sementes != NULL)
     {
-        
-        //testar P1 principal com P1 atual
-        if(partial_fraction_expansion(primario->resto_impar, primario->poly_impares->polinomio->P, ptr_sementes->poly_impares->polinomio->P, &Q,&R1, &R_dummy))
+        if (primario->poly_impares->polinomio->id == 1)
+            if (primario->poly_impares->proximo_polinomio != NULL)
+                if(primario->poly_impares->proximo_polinomio->polinomio->id == 1)
+                    if (primario->poly_impares->proximo_polinomio->proximo_polinomio != NULL)
+                        if (primario->poly_impares->proximo_polinomio->proximo_polinomio->polinomio->id == 1)
+                            if (primario->poly_impares->proximo_polinomio->proximo_polinomio->proximo_polinomio != NULL)
+                                if (primario->poly_impares->proximo_polinomio->proximo_polinomio->proximo_polinomio->polinomio->id == 3)
+                                    if (primario->poly_pares->polinomio->id == 1 &&
+                                        primario->poly_pares->proximo_polinomio->polinomio->id == 1 &&
+                                        primario->poly_pares->proximo_polinomio->proximo_polinomio->polinomio->id == 6 &&
+                                        primario->poly_pares->proximo_polinomio->proximo_polinomio->proximo_polinomio->polinomio->id == 6)
+                                        {
+                                            if (ptr_sementes->poly_impares->polinomio->id == 3 && ptr_sementes->poly_pares->polinomio->id == 6)
+                                            {
+                                                ;
+                                            }
+                                        }
+        //pula este bloco na primeira passada
+        if (!flag_first)
         {
-            //limpar o R_dummy e o &Q
-            destroi_lista_expr_expandida(R_dummy);
-            destroi_lista_expr_expandida(Q);
             R_dummy = NULL;
             Q = NULL;
-            
-            //testar P2 principal com P2 atual
-            if(partial_fraction_expansion(primario->resto_par, primario->poly_pares->polinomio->P, ptr_sementes->poly_pares->polinomio->P, &Q,&R2, &R_dummy))
+            R1 = NULL;
+            R2 = NULL;
+            flag_continue = 0;
+            //testar P1 principal com P1 atual
+            if(partial_fraction_expansion(primario->resto_impar, primario->poly_impares->polinomio->P, ptr_sementes->poly_impares->polinomio->P, &Q,&R1, &R_dummy))
             {
                 //limpar o R_dummy e o &Q
                 destroi_lista_expr_expandida(R_dummy);
                 destroi_lista_expr_expandida(Q);
+                R_dummy = NULL;
+                Q = NULL;
                 
-                //copio o primario, pois pode ser semente para outras decomposicoes
-                decomp_atual = copia_decomp(primario);
-                
-                //insiro os polinomios que fazem parte da decomposi‹o
-                //significa que secundario->P1 Ž o proximo polinomio Par, e seconudario->P2 o proximo polinomio impar, e Ž invertido mesmo
-                insere_polinomio(&decomp_atual->poly_pares,ptr_sementes->poly_impares->polinomio);
-                insere_polinomio(&decomp_atual->poly_impares,ptr_sementes->poly_pares->polinomio);
-                
-                //atualiza Resto par e Resto impar
-                decomp_atual->resto_impar = R1;
-                decomp_atual->resto_par = R2;
-                
-                //quando o numero de polinomios pares e impares for igual ao grau da equacao de entrada pode ser que j‡ tenha terminado
-                contador = 0;
-                poly_ptr = decomp_atual->poly_pares;
-                while (poly_ptr != NULL)
+                //testar P2 principal com P2 atual
+                if(partial_fraction_expansion(primario->resto_par, primario->poly_pares->polinomio->P, ptr_sementes->poly_pares->polinomio->P, &Q,&R2, &R_dummy))
                 {
-                    ++contador;
-                    poly_ptr = poly_ptr->proximo_polinomio;
-                }
-                if (contador == grau)
-                {
-                    //testo se a decomposicaO encontrada Ž valida
-                    //se um dos restos for 0, significa que simplesmente fatoramos o polinomio
-                    if (decomp_atual->resto_impar->parametro == 0.0 || decomp_atual->resto_par->parametro == 0.0)
+                    //limpar o R_dummy e o &Q
+                    destroi_lista_expr_expandida(R_dummy);
+                    destroi_lista_expr_expandida(Q);
+                    
+                    //copio o primario, pois pode ser semente para outras decomposicoes
+                    decomp_atual = copia_decomp(primario);
+                    
+                    //insiro os polinomios que fazem parte da decomposi‹o
+                    //significa que secundario->P1 Ž o proximo polinomio Par, e seconudario->P2 o proximo polinomio impar, e Ž invertido mesmo
+                    insere_polinomio(&decomp_atual->poly_pares,ptr_sementes->poly_impares->polinomio);
+                    insere_polinomio(&decomp_atual->poly_impares,ptr_sementes->poly_pares->polinomio);
+                    
+                    //atualiza Resto par e Resto impar
+                    decomp_atual->resto_impar = R1;
+                    decomp_atual->resto_par = R2;
+                    
+                    //quando o numero de polinomios pares e impares for igual ao grau da equacao de entrada pode ser que j‡ tenha terminado
+                    contador = 0;
+                    poly_ptr = decomp_atual->poly_pares;
+                    while (poly_ptr != NULL)
                     {
-                        destroi_decomp(decomp_atual);
-                        decomp_atual = NULL;
+                        ++contador;
+                        poly_ptr = poly_ptr->proximo_polinomio;
                     }
-                    else
+                    if (contador == grau)
                     {
+                        //testo se a decomposicaO encontrada Ž valida
                         //tirar a prova real
                         if(prova_real(decomp_atual, expr_simplificada))
                         {
@@ -3703,13 +3985,15 @@ void encontra_decomp_recursiva(vetor_decomp *primario, vetor_decomp *secundario,
                                 imprime_decomposicao(decomp_atual, lista_literais);
                                 //imcremento as decomp validas
                                 (*total_decomp)++;
+                                //sinalizo o flag de que nao Ž necess‡rio fazer o teste invertido
+                                flag_continue = 1;
+                                
                                 
                             }
                             else
                                 destroi_decomp(decomp_atual);
                             
                             //limpa o ponteiro para o proximo teste
-                            //TESE eu poderia terminar aqui, pois seria muito dificil encontrar dois ultimos pares que faam parte da mesma decomposicao
                             decomp_atual = NULL;
                             
                         }
@@ -3719,27 +4003,35 @@ void encontra_decomp_recursiva(vetor_decomp *primario, vetor_decomp *secundario,
                             decomp_atual = NULL;
                         }
                     }
+                    else
+                    {
+                        //caso contrario, deve-se proceder com a decomposicao recursivamente
+                        encontra_decomp_recursiva(decomp_atual, ptr_sementes, retorno, grau, expr_simplificada, lista_literais, total_decomp);
+                        //como as decomposi›es validas serao adicionadas no if acima, quando o programa chegar aqui, significa
+                        //que nao preciso mais de decomp_atual;
+                        destroi_decomp(decomp_atual);
+                        decomp_atual = NULL;
+                    }
+                    
+                    //se chegou aqui
+                    
+                    //se j‡ tiver encontrado uma decomposi‹o v‡lida neste passo,, signigica que o segundo teste, com os polinomios invertidos, n‹o Ž necessario
+                    if (flag_continue)
+                    {
+                        //atualiza o ponteiro
+                        ptr_sementes = ptr_sementes->prox_decomp;
+                        continue;
+                    }
+                    
                 }
                 else
                 {
-                    //caso contrario, deve-se proceder com a decomposicao recursivamente
-                    encontra_decomp_recursiva(decomp_atual, ptr_sementes, retorno, grau, expr_simplificada, lista_literais, total_decomp);
-                    //como as decomposi›es validas serao adicionadas no if acima, quando o programa chegar aqui, significa
-                    //que nao preciso mais de decomp_atual;
-                    destroi_decomp(decomp_atual);
-                    decomp_atual = NULL;
+                    //limpar tudo
+                    destroi_lista_expr_expandida(R_dummy);
+                    destroi_lista_expr_expandida(Q);
+                    destroi_lista_expr_expandida(R1);
+                    destroi_lista_expr_expandida(R2);
                 }
-                
-                //se chegou aqui, signigica que o segundo teste, com os polinomios invertidos, n‹o Ž necessario
-                Q = NULL;
-                R1= NULL;
-                R2= NULL;
-                R_dummy = NULL;
-                
-                //atualiza o ponteiro
-                ptr_sementes = ptr_sementes->prox_decomp;
-                
-                continue;
             }
             else
             {
@@ -3747,18 +4039,15 @@ void encontra_decomp_recursiva(vetor_decomp *primario, vetor_decomp *secundario,
                 destroi_lista_expr_expandida(R_dummy);
                 destroi_lista_expr_expandida(Q);
                 destroi_lista_expr_expandida(R1);
-                destroi_lista_expr_expandida(R2);
+                
             }
         }
         else
         {
-            //limpar tudo
-            destroi_lista_expr_expandida(R_dummy);
-            destroi_lista_expr_expandida(Q);
-            destroi_lista_expr_expandida(R1);
-            
+            //reseta o flag de primeira passada
+            flag_first = 0;
         }
-        
+    
         //limpar as variaveis de retorno
         Q = NULL;
         R1= NULL;
@@ -3806,79 +4095,71 @@ void encontra_decomp_recursiva(vetor_decomp *primario, vetor_decomp *secundario,
                 if (contador == grau)
                 {
                     //testo se a decomposicap encontrada Ž valida
-                    //se um dos restos for 0, significa que simplesmente fatoramos o polinomio
-                    if (decomp_atual->resto_impar->parametro == 0.0 || decomp_atual->resto_par->parametro == 0.0)
-                    {
-                        destroi_decomp(decomp_atual);
-                        decomp_atual = NULL;
-                    }
-                    else
-                    {
-                        //tirar a prova real
-                        if(prova_real(decomp_atual, expr_simplificada))
-                        {
-                            //ordeno o polinomio antes de inserir
-                            decomp_atual->poly_pares = ordena_polinomios(decomp_atual->poly_pares);
-                            decomp_atual->poly_impares = ordena_polinomios(decomp_atual->poly_impares);
-                            
-                            
-                            //normalizar os restos->para
-                            if (fabs(decomp_atual->resto_par->parametro) >= fabs(decomp_atual->resto_impar->parametro))
-                            {
-                                decomp_atual->resto_par->parametro = decomp_atual->resto_par->parametro/decomp_atual->resto_impar->parametro;
-                                decomp_atual->resto_impar->parametro = 1.0;
-                                
-                            }
-                            else
-                            {
-                                decomp_atual->resto_impar->parametro = decomp_atual->resto_impar->parametro/decomp_atual->resto_par->parametro;
-                                decomp_atual->resto_par->parametro = 1.0;
-                            }
-                            
-                            //alterar sinais para melhor impressao de resultados, priorizando resto par ser positivo:
-                            if (decomp_atual->resto_par->parametro < 0.0)
-                            {
-                                decomp_atual->resto_par->parametro*= -1.0;
-                                decomp_atual->resto_impar->parametro*= -1.0;
-                            }
 
-                            //procuro por uma decomposicao equivalente no vetor de retorno
-                            ptr_decomp = *retorno;
+                    //tirar a prova real
+                    if(prova_real(decomp_atual, expr_simplificada))
+                    {
+                        //ordeno o polinomio antes de inserir
+                        decomp_atual->poly_pares = ordena_polinomios(decomp_atual->poly_pares);
+                        decomp_atual->poly_impares = ordena_polinomios(decomp_atual->poly_impares);
+                        
+                        
+                        //normalizar os restos->para
+                        if (fabs(decomp_atual->resto_par->parametro) >= fabs(decomp_atual->resto_impar->parametro))
+                        {
+                            decomp_atual->resto_par->parametro = decomp_atual->resto_par->parametro/decomp_atual->resto_impar->parametro;
+                            decomp_atual->resto_impar->parametro = 1.0;
                             
-                            //inicializo uma flag de busca
-                            flag = 0;
-                            while (ptr_decomp != NULL)
-                            {
-                                //se eu encontro uma decomposicao equivalente, interrompo a busca e nao insiro decomp atual no vetro de retorno
-                                if (compara_decomp(decomp_atual, ptr_decomp))
-                                {
-                                    flag = 1;
-                                    break;
-                                }
-                                ptr_decomp = ptr_decomp->ant_decomp;
-                            }
-                            
-                            //se nao encontrou nenhuma decomposicao equivalente, inserir decomp autal no vetor
-                            if (!flag)
-                            {
-                                *retorno = insere_lista_decomp(*retorno, decomp_atual);
-                                //ja imprimo a decomposicao encontrada
-                                imprime_decomposicao(decomp_atual, lista_literais);
-                                //imcremento as decomp validas
-                                (*total_decomp)++;
-                                
-                            }
-                            else
-                                destroi_decomp(decomp_atual);
-                            //limpa o ponteiro para o proximo teste
-                            //TESE eu poderia terminar aqui, pois seria muito dificil encontrar dois ultimos pares que faam parte da mesma decomposicao
-                            decomp_atual = NULL;
                         }
                         else
                         {
-                            destroi_decomp(decomp_atual);
-                            decomp_atual = NULL;
+                            decomp_atual->resto_impar->parametro = decomp_atual->resto_impar->parametro/decomp_atual->resto_par->parametro;
+                            decomp_atual->resto_par->parametro = 1.0;
                         }
+                        
+                        //alterar sinais para melhor impressao de resultados, priorizando resto par ser positivo:
+                        if (decomp_atual->resto_par->parametro < 0.0)
+                        {
+                            decomp_atual->resto_par->parametro*= -1.0;
+                            decomp_atual->resto_impar->parametro*= -1.0;
+                        }
+
+                        //procuro por uma decomposicao equivalente no vetor de retorno
+                        ptr_decomp = *retorno;
+                        
+                        //inicializo uma flag de busca
+                        flag = 0;
+                        while (ptr_decomp != NULL)
+                        {
+                            //se eu encontro uma decomposicao equivalente, interrompo a busca e nao insiro decomp atual no vetro de retorno
+                            if (compara_decomp(decomp_atual, ptr_decomp))
+                            {
+                                flag = 1;
+                                break;
+                            }
+                            ptr_decomp = ptr_decomp->ant_decomp;
+                        }
+                        
+                        //se nao encontrou nenhuma decomposicao equivalente, inserir decomp autal no vetor
+                        if (!flag)
+                        {
+                            *retorno = insere_lista_decomp(*retorno, decomp_atual);
+                            //ja imprimo a decomposicao encontrada
+                            imprime_decomposicao(decomp_atual, lista_literais);
+                            //imcremento as decomp validas
+                            (*total_decomp)++;
+                            
+                        }
+                        else
+                            destroi_decomp(decomp_atual);
+
+                        //limpa o ponteiro para o proximo teste
+                        decomp_atual = NULL;
+                        }
+                    else
+                    {
+                        destroi_decomp(decomp_atual);
+                        decomp_atual = NULL;
                     }
                 }
                 else
@@ -4034,7 +4315,7 @@ void imprime_decomposicao(vetor_decomp *decomposicao, tabela_literais *lista_lit
         printf(")");
         percorre_polinomios = percorre_polinomios->proximo_polinomio;
     }
- /*   
+ /*
     //imprimir os ids dos polinomios
     percorre_polinomios = decomposicao->poly_impares;
     while (percorre_polinomios!= NULL) 
@@ -4049,7 +4330,7 @@ void imprime_decomposicao(vetor_decomp *decomposicao, tabela_literais *lista_lit
     {
         printf(" %d",percorre_polinomios->polinomio->id);
         percorre_polinomios = percorre_polinomios->proximo_polinomio;
-    }*/
+    } */
 }
 
 //funcao que retorna 1 caso as decomposicoes sejam equivalentes e 0 caso nao sejam
@@ -4117,153 +4398,1040 @@ int compara_decomp(vetor_decomp *decomp1, vetor_decomp *decomp2)
     
 }
 
-
-//Funcao que testa se um par de polinomios pode ser combinado com outro para formar uma decomposi‹o, retornando a decomposicao parcial
-void encontra_decomp_recursiva_dummie(vetor_decomp *primario, vetor_decomp *secundario, int grau, int *total_tries, int profundidade)
+vetor_polinomios *reconta_polinomios(vetor_sementes *lista_sementes,vetor_polinomios *lista_polinomios)
 {
-
-    vetor_decomp *ptr_sementes = NULL;
+    vetor_polinomios *p_lista_polinomios;
+    int id_impar = 0;
+    int id_par = 0;
+    vetor_sementes  *p_lista_sementes=lista_sementes;
     
-    //aponto para o inicio do vetor sementes
-    ptr_sementes = secundario;
-    
-    //vou tentar combinar o primario com TODOS os elementos do secund‡rio
-    while (ptr_sementes != NULL)
+    //percorrer todo o vetor sementes
+    while (p_lista_sementes != NULL)
     {
-        //testou P1 principal com P1 atual & P2 principal com P2 atual e deu certo, pois estamos vendo o pior caso
-        //se ja chamou recursivamente um numero de entradas igual ao grau, Ž porque ja chegou no final
-        if (profundidade == grau)
+        //procura cada polinomio da semente na lista de polinomios e seta a flag de aprovado se o encontrar;
+        id_par = p_lista_sementes->P1.id;
+        id_impar = p_lista_sementes->P2.id;
+        
+        //inicializa a lista de polinomios
+        p_lista_polinomios = lista_polinomios;
+        while (p_lista_polinomios!= NULL)
         {
-            *total_tries+=1;
-        }
-        //caso contrario, fazer uma chamada recursiva
-        else
-        {
-            encontra_decomp_recursiva_dummie(primario, ptr_sementes, grau, total_tries, profundidade + 1);
+            //a cada polinomio da lista, se o id for igual a P1 ou P2, seta a flag de aprovado
+            if (p_lista_polinomios->polinomio->id == id_impar || p_lista_polinomios->polinomio->id == id_par)
+            {
+                p_lista_polinomios->polinomio->flag_approved = 1;
+            }
+            
+            p_lista_polinomios = p_lista_polinomios->proximo_polinomio;
         }
         
-        //atualiza o ponteiro
-        ptr_sementes = ptr_sementes->prox_decomp;
+        //incrementa ponteiro
+        p_lista_sementes = p_lista_sementes->conjunto_prox;
     }
-    profundidade-=1;
     
+    //apos setar flag todos os polinomios que podem fazer parte de alguma decomposicao, remover aqueles que nao tem a flag setada
+    p_lista_polinomios = lista_polinomios;
+    while (1)
+    {
+        if (!p_lista_polinomios->polinomio->flag_approved)
+        {
+            p_lista_polinomios = remove_polinomio(p_lista_polinomios);
+        }
+        else if (p_lista_polinomios->proximo_polinomio!= NULL)
+        {
+            p_lista_polinomios = p_lista_polinomios->proximo_polinomio;
+        }
+        else
+            break;
+    }
+    
+    //reboboina a lista
+    while (p_lista_polinomios->polinomio_anterior != NULL)
+    {
+        p_lista_polinomios = p_lista_polinomios->polinomio_anterior;
+    }
+    
+    return p_lista_polinomios;
 }
 
-void encontra_decomp_dummie(vetor_sementes *entrada, int grau)
+vetor_polinomios *remove_polinomios_nao_pertencentes(vetor_decomp *lista_decomp,vetor_polinomios *lista_polinomios)
 {
-    vetor_sementes *secundario_ptr; //ponteiro para os loops internos
+    vetor_polinomios *p_lista_polinomios;
+    int id_impar = 0;
+    int id_par = 0;
+    int ok_par = 0;
+    int ok_impar = 0;
+    vetor_decomp  *p_lista_decomp =lista_decomp;
+    vetor_polinomios *p_pares, *p_impares;
+    
+    //If a null list is given, return NULL
+    if (lista_decomp == NULL)
+    {
+        return NULL;
+    }
+    
+    //percorrer todo o vetor de decomposicoes
+    while (p_lista_decomp != NULL)
+    {
+        //procura cada polinomio do lado par e do lado impar na lista de polinomios, e os que forem sendo encontrados, mudar o flag de 1 para 0
+        p_impares = p_lista_decomp->poly_impares;
+        p_pares = p_lista_decomp->poly_pares;
+        
+        //como o numero de polinoimos do lado par Ž igual ao do lado impar em uma decomposicao encontrada, pode-se percorrer apenas um enquanto testa-se ambos
+        while (p_impares != NULL)
+        {
+            id_par = p_pares->polinomio->id;
+            id_impar = p_impares->polinomio->id;
+            
+            //procuro ambos na lista de polinomios
+            //inicializa a lista de polinomios
+            p_lista_polinomios = lista_polinomios;
+            ok_par = 0;
+            ok_impar = 0;
+            while (p_lista_polinomios!= NULL)
+            {
+                //a cada polinomio da lista, se o id for igual ao polinomio par, re-seta a flag de aprovado
+                if (p_lista_polinomios->polinomio->id == id_par)
+                {
+                    p_lista_polinomios->polinomio->flag_approved = 0;
+                    ok_par = 1;
+                }
+                
+                //a cada polinomio da lista, se o id for igual ao polinomio impar re-seta a flag de aprovado
+                if (p_lista_polinomios->polinomio->id == id_impar )
+                {
+                    p_lista_polinomios->polinomio->flag_approved = 0;
+                    ok_impar = 1;
+                }
+                
+                //se ja encontrou os dois, nao precisa mais continuar
+                if (ok_impar && ok_par)
+                {
+                    break;
+                }
+                
+                p_lista_polinomios = p_lista_polinomios->proximo_polinomio;
+            }
+
+            //incrementa os ponteiros
+            p_impares = p_impares->proximo_polinomio;
+            p_pares = p_pares->proximo_polinomio;
+        }
+
+        
+        //incrementa ponteiro
+        p_lista_decomp = p_lista_decomp->prox_decomp;
+    }
+    
+    //apos re-setar flag todos os polinomios que fizeram parte de alguma decomposicao, remover aqueles que tem a flag setada
+    p_lista_polinomios = lista_polinomios;
+    while (1)
+    {
+        if (p_lista_polinomios->polinomio->flag_approved)
+        {
+            p_lista_polinomios = remove_polinomio(p_lista_polinomios);
+        }
+        else if (p_lista_polinomios->proximo_polinomio!= NULL)
+        {
+            p_lista_polinomios = p_lista_polinomios->proximo_polinomio;
+        }
+        else
+            break;
+    }
+    
+    //reboboina a lista
+    if (p_lista_polinomios!= NULL)
+    {
+        while (p_lista_polinomios->polinomio_anterior != NULL)
+        {
+            p_lista_polinomios = p_lista_polinomios->polinomio_anterior;
+        }
+    }
+
+    
+    return p_lista_polinomios;
+}
+
+//fun‹o que implementa a decomposi‹o em si - versao recursiva
+/*vetor_decomp *encontra_decomp_mulder(vetor_polinomios *entrada, int grau, lista_expr *expr_simplificada, tabela_literais *lista_literais)
+{
+    vetor_polinomios *primario_ptr, *secundario_ptr; //ponteiro para os loops internos
     
     vetor_decomp *decomp_atual; //lista que ser‡ gerada dentro do loop atual
-    vetor_decomp *decomp_referencia; //lista de refrencia para o loop atual
+    vetor_decomp *lista_decomp = NULL; //elemento manipulado dentro do loop
+    vetor_decomp_simple *poly_pares = NULL, *poly_impares = NULL;
+    lista_expr *Q=NULL, *num_a=NULL, *num_b=NULL;
     
     int total_decomp = 0;
     
     
     //inicializa‹o da lista de referncia
-    decomp_referencia = copia_vetor_semente(entrada);
-    decomp_atual = decomp_referencia;
+    primario_ptr = entrada;
     decomp_atual = NULL;
     
-    //inicializa‹o do ponteiro de busca secund‡rio, pode ser que o par de polinomios inicial possa combinar com si mesmo
-    secundario_ptr = entrada;
-    
     //loop de construcao das decomposicoes
-    while (decomp_referencia != NULL)
+    while (primario_ptr != NULL)
     {
-        //para cada vetor incial de decomp referencia, encontro todas as decomposicoes que possam ser geradas a partir dele
-        encontra_decomp_recursiva_dummie(decomp_referencia, decomp_referencia, grau, &total_decomp, 2 );
+        //inicializa o proximo ponteiro de busca
+        secundario_ptr = entrada->proximo_polinomio;
+        while(secundario_ptr != NULL)
+        {
+            //inicializa variaveis
+            Q = NULL;
+            num_a = NULL;
+            num_b = NULL;
+            //tenta realizar uma expans‹o em fra‹o parcialentre primario e secundario
+            if (partial_fraction_expansion(expr_simplificada, primario_ptr->polinomio->P, secundario_ptr->polinomio->P, &Q, &num_a, &num_b))
+            {
+                //disparo a divis‹o recursiva por 2 BP,s aqui
+                encontra_decomp_parcial(NULL,primario_ptr->polinomio, num_a, entrada, grau, &poly_pares);
+                
+                
+                //se a rotina de encontrar decomposicoes parciais nao encontrar nada, o procedimento falhou
+                if (poly_pares != NULL)
+                {
+                    //rebobina os polinomios pares
+                    while (poly_pares->ant_decomp != NULL)
+                    {
+                        poly_pares = poly_pares->ant_decomp;
+                    }
+                    
+                    encontra_decomp_parcial(NULL,secundario_ptr->polinomio, num_b, entrada, grau, &poly_impares);
+                
+                    //de posse dos lados pares e dos lados ’mpares, encontrar quais combina›es geram uma decomposi‹o v‡lida
+                    if (poly_impares != NULL)
+                    {
+                        //rebobina os polinomios impares
+                        while (poly_impares->ant_decomp != NULL)
+                        {
+                            poly_impares = poly_impares->ant_decomp;
+                        }
+
+                        combina_decomp_mulder(poly_impares, poly_pares, secundario_ptr->polinomio, primario_ptr->polinomio, expr_simplificada, &lista_decomp, &total_decomp, lista_literais);
+                        
+                    }
+                }
+
+                destroi_vetor_decomp_simples(poly_pares);
+                destroi_vetor_decomp_simples(poly_impares);
+
+                poly_pares = NULL;
+                poly_impares = NULL;
+            }
+            
+            //limpa as variaveis para a proxima passagem
+            destroi_lista_expr_expandida(Q);
+            destroi_lista_expr_expandida(num_a);
+            destroi_lista_expr_expandida(num_b);
+            
+            //atualizo ponteiro
+            secundario_ptr = secundario_ptr->proximo_polinomio;
+        }
         
-        //apagar o elemento testado e atualizar o ponteiro de referencia
-        decomp_atual = decomp_referencia->prox_decomp;
-        destroi_decomp(decomp_referencia);
-        decomp_referencia = decomp_atual;
-        if (decomp_referencia!= NULL)
-            decomp_referencia->ant_decomp = NULL;
+        //atualizo ponteiro
+        primario_ptr = primario_ptr->proximo_polinomio;
     }
+    
+    
+    //rebobinar a lista de decomposi›es
+    if (lista_decomp != NULL)
+        while (lista_decomp->ant_decomp != NULL)
+            lista_decomp = lista_decomp->ant_decomp;
     
     //imprimir numero de decomposicoes
-    printf("\n\n o numero maximo de combinacoes testadas com meu algoritmo: %d", total_decomp);
+    printf("\n\nThe number of valid Translinear decompositions found is: %d", total_decomp);
+    printf("\n Number of partial fraction operations performed is: %d\n",global_num_parfrac);
     
+    //retornar
+    return lista_decomp;
 }
-
-//Funcao que testa se um par de polinomios pode ser combinado com outro para formar uma decomposi‹o, retornando a decomposicao parcial
-void encontra_decomp_recursiva_dummie_mulder(vetor_decomp *primario, vetor_polinomios *secundario, int grau, int *total_tries, int profundidade)
+*/
+void combina_decomp_mulder(vetor_decomp_simple *decomp_impares, vetor_decomp_simple *decomp_pares, polinomio *base_par, polinomio *base_impar, lista_expr *expr_simplificada, vetor_decomp **lista_decomp, int *total_decomp, tabela_literais *lista_literais)
 {
+    vetor_decomp *decomp_atual, *ptr_decomp;
+    vetor_decomp_simple *p_decomp_pares = NULL;
+    vetor_decomp_simple *p_decomp_impares = NULL;
+    vetor_polinomios *poly_ptr;
+    /*
+    vetor_polinomios *poly_par_ptr = NULL;
+    vetor_polinomios *poly_impar_ptr = NULL;
     
-    vetor_polinomios *ptr_sementes = NULL;
+    lista_expr *acum_par = NULL;
+    lista_expr *acum_impar = NULL;
+    lista_expr *Q, *R, *acum;
+    */
+    int flag;
     
-    //aponto para o inicio do vetor sementes
-    ptr_sementes = secundario;
     
-    //vou tentar combinar o primario com TODOS os elementos do secund‡rio
-    while (ptr_sementes != NULL)
+    //para cada decomp_par, percorrer todas as decomp_impares
+    p_decomp_pares = decomp_pares;
+    while (p_decomp_pares != NULL)
     {
-        //testou P1 principal com P1 atual & P2 principal com P2 atual e deu certo, pois estamos vendo o pior caso
-        //se ja chamou recursivamente um numero de entradas igual ao grau, Ž porque ja chegou no final
-        if (profundidade == grau)
+        //inicializa‹o de variaveis
+        p_decomp_impares = decomp_impares;
+        while (p_decomp_impares != NULL)
         {
-            *total_tries+=1;
-        }
-        //caso contrario, fazer uma chamada recursiva
-        else
-        {
-            encontra_decomp_recursiva_dummie_mulder(primario, ptr_sementes, grau, total_tries, profundidade + 1);
+            //reescrita do procedimento
+            //crio uma decomp com os polys pares e com polys imppares
+            //copio o primario, pois pode ser semente para outras decomposicoes
+            decomp_atual = novo_vetor_decomp();
+            
+            //copio a base par
+            insere_polinomio(&(decomp_atual->poly_pares), base_par);
+            
+            //copio o resto dos polinoios pares
+            poly_ptr = p_decomp_pares->polinomios;
+            while (poly_ptr != NULL)
+            {
+                insere_polinomio(&(decomp_atual->poly_pares), poly_ptr->polinomio);
+                poly_ptr = poly_ptr->proximo_polinomio;
+            }
+            
+            //copio a base impar
+            insere_polinomio(&(decomp_atual->poly_impares), base_impar);
+            
+            //copio o resto dos polinoios impares
+            poly_ptr = p_decomp_impares->polinomios;
+            while (poly_ptr != NULL)
+            {
+                insere_polinomio(&(decomp_atual->poly_impares), poly_ptr->polinomio);
+                poly_ptr = poly_ptr->proximo_polinomio;
+            }
+            
+            //copia os outros parametros
+            decomp_atual->resto_impar = copia_lista_expr(p_decomp_pares->resto);
+            decomp_atual->resto_par = copia_lista_expr(p_decomp_impares->resto);
+            
+            decomp_atual->ant_decomp = NULL;
+            decomp_atual->prox_decomp = NULL;
+
+            //tiro a prova real
+            if (prova_real(decomp_atual, expr_simplificada))
+            {
+                //ordeno o polinomio antes de inserir
+                decomp_atual->poly_pares = ordena_polinomios(decomp_atual->poly_pares);
+                decomp_atual->poly_impares = ordena_polinomios(decomp_atual->poly_impares);
+                
+                //testo se esta decomposi‹o encontrada j‡ n‹o existe
+                //procuro por uma decomposicao equivalente no vetor de retorno
+                ptr_decomp = *lista_decomp;
+                
+                //inicializo uma flag de busca
+                flag = 0;
+                while (ptr_decomp != NULL)
+                {
+                    //se eu encontro uma decomposicao equivalente, interrompo a busca e nao insiro decomp atual no vetro de retorno
+                    if (compara_decomp(decomp_atual, ptr_decomp))
+                    {
+                        flag = 1;
+                        break;
+                    }
+                    ptr_decomp = ptr_decomp->ant_decomp;
+                }
+                
+                //se nao encontrou nenhuma decomposicao equivalente, inserir decomp autal no vetor
+                if (!flag)
+                {
+                    
+                    //primeiro normalizar os restos
+                    if (fabs(decomp_atual->resto_par->parametro) >= fabs(decomp_atual->resto_impar->parametro))
+                    {
+                        decomp_atual->resto_par->parametro = decomp_atual->resto_par->parametro/decomp_atual->resto_impar->parametro;
+                        decomp_atual->resto_impar->parametro = 1.0;
+                        
+                    }
+                    else
+                    {
+                        decomp_atual->resto_impar->parametro = decomp_atual->resto_impar->parametro/decomp_atual->resto_par->parametro;
+                        decomp_atual->resto_par->parametro = 1.0;
+                    }
+                    
+                    //alterar sinais para melhor impressao de resultados, priorizando resto par ser positivo:
+                    if (decomp_atual->resto_par->parametro < 0.0)
+                    {
+                        decomp_atual->resto_par->parametro*= -1.0;
+                        decomp_atual->resto_impar->parametro*= -1.0;
+                    }
+                    
+                    //ja imprimo a decomposicao encontrada
+                    imprime_decomposicao(decomp_atual, lista_literais);
+                    *lista_decomp = insere_lista_decomp(*lista_decomp, decomp_atual);
+                    decomp_atual = NULL;
+                    
+                    //imcremento as decomp validas
+                    (*total_decomp)++;
+                    
+                }
+                else
+                {
+                    destroi_decomp(decomp_atual);
+                    //limpa o ponteiro para o proximo teste
+                    decomp_atual = NULL;
+                }
+                
+                
+            }
+            else
+            {
+                //limppo as variaveis
+                destroi_decomp(decomp_atual);
+                decomp_atual = NULL;
+            }
+
+            //atualizo o ponteiro
+            p_decomp_impares = p_decomp_impares->prox_decomp;
         }
         
-        //atualiza o ponteiro
-        ptr_sementes = ptr_sementes->proximo_polinomio;
+        //atualizo o ponteiro
+        p_decomp_pares = p_decomp_pares->prox_decomp;
     }
-    profundidade-=1;
     
 }
 
-void encontra_decomp_dummie_mulder(vetor_sementes *entrada, vetor_polinomios *lista_polinomios, int grau)
+
+
+void encontra_decomp_parcial(vetor_decomp_simple *poly_acumulados, polinomio *base, lista_expr *resto, vetor_polinomios *lista_polinomios, int grau, vetor_decomp_simple **retorno)
 {
-    vetor_sementes *secundario_ptr; //ponteiro para os loops internos
+    vetor_polinomios *ptr_polinomios = lista_polinomios;
+    lista_expr *Q, *R, *R_dummy;
+    vetor_decomp_simple *decomp_atual;
+    int contador;
+    vetor_polinomios *poly_ptr;
+    
+    //testa a base com todos os polinomios, excluindo-se a propria base
+    while (ptr_polinomios != NULL)
+    {
+        //testa primeiro se o polinomio nao Ž igual a base
+        if (base->id != ptr_polinomios->polinomio->id)
+        {
+            //limpar as variaveis
+            Q = NULL;
+            R = NULL;
+            R_dummy = NULL;
+            //testar a base principal com o polinomio atual
+            if(partial_fraction_expansion(resto, base->P, ptr_polinomios->polinomio->P, &Q,&R, &R_dummy))
+            {
+                //limpar o R_dummy e o &Q
+                destroi_lista_expr_expandida(R_dummy);
+                destroi_lista_expr_expandida(Q);
+                
+                //copio o primario, pois pode ser semente para outras decomposicoes
+                decomp_atual = copia_decomp_simples(poly_acumulados);
+                
+                //insiro os polinomios que fazem parte da decomposi‹o
+                insere_polinomio(&decomp_atual->polinomios,ptr_polinomios->polinomio);
+                
+                //atualiza Resto par e Resto impar
+                decomp_atual->resto = R;
+                
+                //quando o numero de polinomios acumulados for igual ao grau menos 1 da equacao de entrada pode ser que j‡ tenha terminado
+                contador = 0;
+                poly_ptr = decomp_atual->polinomios;
+                while (poly_ptr != NULL)
+                {
+                    ++contador;
+                    poly_ptr = poly_ptr->proximo_polinomio;
+                }
+                
+                //somo um ao contador
+                contador++;
+                //vejo se ja terminou
+                if (contador == grau)
+                {
+                    //terminou de fazer uma decomposi‹o parcial, inser’-la no vetor de decomposi›es totais
+                    *retorno = insere_decomp_simples(*retorno, decomp_atual);
+                    
+                }
+                //caso contrario, prosseguir com as decomposicoes parciais de forma recursiva
+                else
+                {
+                    //caso contrario, deve-se proceder com a decomposicao recursivamente
+                    encontra_decomp_parcial(decomp_atual, base, R, ptr_polinomios,grau,retorno);
+                    //como as decomposi›es validas serao adicionadas no if acima, quando o programa chegar aqui, significa
+                    //que nao preciso mais de decomp_atual;
+                    destroi_decomp_simples(decomp_atual);
+                    decomp_atual = NULL;
+                }
+                
+            }
+
+        }
+    
+        //incrementa o ponteiro
+        ptr_polinomios = ptr_polinomios->proximo_polinomio;
+    }
+    
+    
+}
+
+
+
+
+
+vetor_decomp_simple *copia_decomp_simples(vetor_decomp_simple *entrada)
+{
+    vetor_decomp_simple *nova_decomp;
+    vetor_polinomios *poly_ptr;
+    
+    nova_decomp = novo_vetor_decomp_simples();
+    if (entrada != NULL)
+    {
+        //copio os polinomios do primario em nova_decomp
+        poly_ptr = entrada->polinomios;
+        while (poly_ptr != NULL)
+        {
+            insere_polinomio(&(nova_decomp->polinomios), poly_ptr->polinomio);
+            poly_ptr = poly_ptr->proximo_polinomio;
+        }
+    }
+    else
+    {
+        nova_decomp->polinomios = NULL;
+    }
+    
+    //copia os outros parametros
+    nova_decomp->resto = NULL;
+    nova_decomp->ant_decomp = NULL;
+    nova_decomp->prox_decomp = NULL;
+    
+    return nova_decomp;
+    
+}
+
+//insere uma lista de decomposicoes dentro de outra, retornando um ponteiro para o final dela
+vetor_decomp_simple *insere_decomp_simples(vetor_decomp_simple *lista_destino, vetor_decomp_simple *lista_origem)
+{
+    vetor_decomp_simple *ptr_lista_origem, *ptr_lista_destino;
+    
+    ptr_lista_origem = lista_origem;
+    if (lista_destino == NULL)
+    {
+        //aponto para o final da lista a ser inserida
+        while (ptr_lista_origem->prox_decomp != NULL)
+            ptr_lista_origem = ptr_lista_origem->prox_decomp;
+        
+        //retorno o fim da lista destino como o fim da lista de origem
+        return ptr_lista_origem;
+        
+    }
+    else
+    {
+        ptr_lista_destino = lista_destino;
+        //avanar o ponteiro para fim da lista destino
+        while (ptr_lista_destino->prox_decomp != NULL)
+            ptr_lista_destino = ptr_lista_destino->prox_decomp;
+        
+        //rebobinar o ponteiro da lista de origem
+        while (ptr_lista_origem->ant_decomp != NULL)
+            ptr_lista_origem = ptr_lista_origem->ant_decomp;
+        
+        //ligar as 2
+        ptr_lista_destino->prox_decomp = ptr_lista_origem;
+        ptr_lista_origem->ant_decomp = ptr_lista_destino;
+        
+        //avanar o ponteiro atŽ o final
+        while (ptr_lista_destino->prox_decomp != NULL)
+            ptr_lista_destino = ptr_lista_destino->prox_decomp;
+        
+        return ptr_lista_destino;
+    }
+}
+
+
+void destroi_decomp_simples(vetor_decomp_simple *entrada)
+{
+    if (entrada->resto != NULL)
+        destroi_lista_expr_expandida(entrada->resto);
+    //destroi os vetores de polinomios
+    if (entrada->polinomios != NULL)
+        destroi_vetor_polinomios(entrada->polinomios);
+    
+    free(entrada);
+}
+
+
+vetor_decomp_simple *novo_vetor_decomp_simples(void)
+{
+    vetor_decomp_simple *novo;
+    novo = (vetor_decomp_simple *)malloc(sizeof(vetor_decomp_simple));
+    novo->polinomios= NULL;
+    novo->resto = NULL;
+    
+    novo->prox_decomp = NULL;
+    novo->ant_decomp = NULL;
+    
+    return novo;
+}
+void destroi_vetor_decomp_simples(vetor_decomp_simple *entrada)
+{
+    if (entrada == NULL)
+        return;
+    if (entrada->prox_decomp != NULL)
+    {
+        destroi_vetor_decomp_simples(entrada->prox_decomp);
+    }
+    
+    destroi_decomp_simples(entrada);
+}
+
+//fun›es do algoritmo de corre;la‹o
+vetor_correlacao_direta *constroi_correlacao_direta(vetor_sementes *entrada)
+{
+    vetor_sementes *p_entrada = entrada;
+    int id_atual = -1; //todos os id's sao positivos, ent‹o este valor Ž so para disparar a primeira entrada
+    int ultimo_id = -1;
+    int outro_id;
+    vetor_correlacao_direta *correlacao_atual = NULL;
+    
+    if (entrada == NULL)
+    {
+        return NULL;
+    }
+    
+    //percorrer o vetor inteiro
+    while (1)
+    {
+        //assumindo que o vetor j‡ est‡ ordenado, grava omenor dos ids
+        if (p_entrada->P1.id < p_entrada->P2.id)
+        {
+            id_atual = p_entrada->P1.id;
+            outro_id = p_entrada->P2.id;
+        }
+        else
+        {
+            id_atual = p_entrada->P2.id;
+            outro_id = p_entrada->P1.id;
+        }
+        
+        //compara com o ultimo_id. caso negativo, criar um elemento novo de correla‹o
+        if (id_atual != ultimo_id)
+        {
+            //se for a primiera passagem, correlacao atual nao existe
+            if (correlacao_atual != NULL)
+            {
+                correlacao_atual->prox_corr = novo_vetor_correlacao_direta();
+                correlacao_atual->prox_corr->ant_corr = correlacao_atual;
+                correlacao_atual = correlacao_atual->prox_corr;
+            }
+            else
+            {
+                correlacao_atual = novo_vetor_correlacao_direta();
+            }
+            
+            //popular o vetor
+            //reutiliza a vari‡vel id_atual para pegar o id do outro polinomio
+            correlacao_atual->id_polinomio_base = id_atual;
+            
+            //atualiza os ids
+            ultimo_id = id_atual;
+        }
+        
+        
+        //insere o outro lista de polinomios correlatos
+        insere_id_polinomios_correlatos(correlacao_atual, outro_id);
+        
+        
+        //atualiza o ponteiro
+        if (p_entrada->conjunto_prox!= NULL)
+        {
+            p_entrada = p_entrada->conjunto_prox;
+        }
+        else
+        {
+            break;
+        }
+        
+    }
+    //rebobinar as correla›es encontradas
+    while (correlacao_atual->ant_corr != NULL)
+    {
+        correlacao_atual = correlacao_atual->ant_corr;
+    }
+    
+    return correlacao_atual;
+}
+
+vetor_correlacao_direta *novo_vetor_correlacao_direta(void)
+{
+    vetor_correlacao_direta *novo;
+    
+    novo = (vetor_correlacao_direta *)malloc(sizeof(vetor_correlacao_direta));
+    novo->ant_corr = NULL;
+    novo->prox_corr = NULL;
+    novo->id_polinomio_base = -1;
+    novo->poly_correlatos = NULL;
+    
+    return novo;
+}
+
+void insere_id_polinomios_correlatos(vetor_correlacao_direta *correlacao_atual, int outro_id)
+{
+    vetor_id_polinomios *novo;
+    vetor_id_polinomios *p_polinomios;
+    
+    novo = (vetor_id_polinomios *)malloc(sizeof(vetor_id_polinomios));
+    novo->id_polinomio = outro_id;
+    novo->ant_poly = NULL;
+    novo->prox_poly = NULL;
+    
+    //insere na lista
+    if (correlacao_atual->poly_correlatos == NULL)
+    {
+        correlacao_atual->poly_correlatos = novo;
+    }
+    else
+    {
+        p_polinomios = correlacao_atual->poly_correlatos;
+        while (p_polinomios->prox_poly != NULL)
+        {
+            p_polinomios = p_polinomios->prox_poly;
+        }
+        p_polinomios->prox_poly = novo;
+    }
+}
+
+void imprime_correlacoes_diretas(vetor_correlacao_direta *entrada)
+{
+    vetor_correlacao_direta *p_correlacoes = entrada;
+    vetor_id_polinomios *p_polinomios;
+    
+    printf("\n Imprimindo as correlacoes diretas entre polinomios...\n");
+    while (p_correlacoes != NULL)
+    {
+        printf("\n%d:\t",p_correlacoes->id_polinomio_base);
+        p_polinomios = p_correlacoes->poly_correlatos;
+        while (p_polinomios != NULL)
+        {
+            printf("%d, ",p_polinomios->id_polinomio);
+            p_polinomios = p_polinomios->prox_poly;
+        }
+        
+        p_correlacoes = p_correlacoes->prox_corr;
+    }
+    
+}
+vetor_sementes *ordena_vetor_semente(vetor_sementes *entrada)
+{
+    //ordena‹o formato buuble sort
+    vetor_sementes *p_atual, *p_troca;
+    int menor_atual, menor_troca;
+    int flag_troca = 0;
+    
+    p_atual = entrada;
+    if (p_atual == NULL)
+    {
+        return NULL;
+    }
+    //percorre a lista de polinomios e troca os elementos 1 a 1 quando for necessario. S— para quando a percorrer o polinomio inteiro e n‹o fizer troca alguma
+    do
+    {
+        //reseta o flag de flag_troca
+        flag_troca = 0;
+        //rebobina para o inicio do polinomio
+        while (p_atual->conjunto_ant != NULL)
+            p_atual = p_atual->conjunto_ant;
+        //percorre a lista
+        while (p_atual->conjunto_prox != NULL)
+        {
+            p_troca = p_atual->conjunto_prox;
+            //escolhe os menores ’ndices de cada vetor
+            if (p_atual->P1.id < p_atual->P2.id)
+                menor_atual = p_atual->P1.id;
+            else
+                menor_atual = p_atual->P2.id;
+            
+            if (p_troca->P1.id < p_troca->P2.id)
+                menor_troca = p_troca->P1.id;
+            else
+                menor_troca = p_troca->P2.id;
+            
+            //compara dois vetores_semente adjacentes. Se algum dos id's do atual for maior que o id da troca, trocar os elementos de lugar
+            if (menor_atual > menor_troca )
+            {
+                //sinaliza que houve troca
+                flag_troca = 1;
+                //realiza a troca
+                //ajusta os ponteiros de borda
+                p_atual->conjunto_prox = p_troca->conjunto_prox;
+                if (p_atual->conjunto_prox != NULL)
+                    p_atual->conjunto_prox->conjunto_ant = p_atual;
+                
+                p_troca->conjunto_ant = p_atual->conjunto_ant;
+                if(p_troca->conjunto_ant != NULL)
+                    p_troca->conjunto_ant->conjunto_prox = p_troca;
+                
+                //ajusta os ponteiros entre p_atual e p_troca
+                p_troca->conjunto_prox = p_atual;
+                p_atual->conjunto_ant = p_troca;
+            }
+            else
+                p_atual = p_atual->conjunto_prox;;
+        }
+    }while (flag_troca == 1);
+    
+    //recuperar o inicio do polinomio
+    while (p_atual->conjunto_ant != NULL)
+    {
+        p_atual = p_atual->conjunto_ant;
+    }
+    
+    return p_atual;
+}
+
+//fun›es para medi‹o de tempo
+
+
+
+void inicia_cronometro(time_t *medidor)
+{
+    *medidor = time(NULL);
+}
+
+void para_cronometro(time_t *medidor)
+{
+    time_t tms;
+    unsigned long int horas, minutos, segundos, dias;
+    
+    tms = time(NULL);
+    
+    segundos = (unsigned long int)difftime(tms, *medidor);
+    
+    minutos = (segundos/60);
+    segundos =(unsigned long int)(segundos%60);
+    
+    horas = minutos/60;
+    minutos = (unsigned long int)(minutos%60);
+    
+    dias = horas/24;
+    horas = (unsigned long int)(horas%24);
+
+    printf("\ntime elapsed: %lu days, %lu hours, %lu minutes, %lu seconds",dias,horas,minutos,segundos);
+}
+
+
+vetor_decomp *encontra_decomp_mulder(vetor_polinomios *entrada, int grau, lista_expr *expr_simplificada, tabela_literais *lista_literais)
+{
+    vetor_polinomios *primario_ptr, *secundario_ptr; //ponteiro para os loops internos
     
     vetor_decomp *decomp_atual; //lista que ser‡ gerada dentro do loop atual
-    vetor_decomp *decomp_referencia; //lista de refrencia para o loop atual
+    vetor_decomp *lista_decomp = NULL; //elemento manipulado dentro do loop
+    vetor_decomp_simple *poly_pares = NULL, *poly_impares = NULL;
+    lista_expr *Q=NULL, *num_a=NULL, *num_b=NULL;
     
     int total_decomp = 0;
     
     
     //inicializa‹o da lista de referncia
-    decomp_referencia = copia_vetor_semente(entrada);
-    decomp_atual = decomp_referencia;
+    primario_ptr = entrada;
     decomp_atual = NULL;
     
-    //inicializa‹o do ponteiro de busca secund‡rio, pode ser que o par de polinomios inicial possa combinar com si mesmo
-    secundario_ptr = entrada;
-    
     //loop de construcao das decomposicoes
-    while (decomp_referencia != NULL)
+    while (primario_ptr != NULL)
     {
-        //para cada vetor incial de decomp referencia, encontro todas as decomposicoes que possam ser geradas a partir dele
-        encontra_decomp_recursiva_dummie_mulder(decomp_referencia, lista_polinomios, grau, &total_decomp, 2 );
+        //inicializa o proximo ponteiro de busca
+        secundario_ptr = entrada->proximo_polinomio;
+        while(secundario_ptr != NULL)
+        {
+            //inicializa variaveis
+            Q = NULL;
+            num_a = NULL;
+            num_b = NULL;
+            //tenta realizar uma expans‹o em fra‹o parcialentre primario e secundario
+            if (partial_fraction_expansion(expr_simplificada, primario_ptr->polinomio->P, secundario_ptr->polinomio->P, &Q, &num_a, &num_b))
+            {
+                //disparo a divis‹o recursiva por 2 BP,s aqui
+                encontra_decomp_parcial_primaria(NULL,primario_ptr->polinomio, num_a,secundario_ptr->polinomio, num_b, entrada, grau, &lista_decomp, &total_decomp, lista_literais,expr_simplificada );
+                    
+            }
+            destroi_vetor_decomp_simples(poly_impares);
+            destroi_vetor_decomp_simples(poly_pares);
+            poly_pares = NULL;
+            poly_impares = NULL;
+            
+            
+            //limpa as variaveis para a proxima passagem
+            destroi_lista_expr_expandida(Q);
+            destroi_lista_expr_expandida(num_a);
+            destroi_lista_expr_expandida(num_b);
+            
+            //atualizo ponteiro
+            secundario_ptr = secundario_ptr->proximo_polinomio;
+        }
         
-        //diminui em 1 o total_decomp, pois ele nao combina com o outro semente.
-        total_decomp--;
-        
-        //realiza denovo a mesma funcao, pois ele separa em dois problemas distintos
-        encontra_decomp_recursiva_dummie_mulder(decomp_referencia, lista_polinomios, grau, &total_decomp, 2 );
-        
-        //diminui em 1 o total_decomp, pois ele nao combina com o outro semente.
-        total_decomp--;
-        
-        //apagar o elemento testado e atualizar o ponteiro de referencia
-        decomp_atual = decomp_referencia->prox_decomp;
-        destroi_decomp(decomp_referencia);
-        decomp_referencia = decomp_atual;
-        if (decomp_referencia!= NULL)
-            decomp_referencia->ant_decomp = NULL;
+        //atualizo ponteiro
+        primario_ptr = primario_ptr->proximo_polinomio;
     }
     
+    
+    //rebobinar a lista de decomposi›es
+    if (lista_decomp != NULL)
+        while (lista_decomp->ant_decomp != NULL)
+            lista_decomp = lista_decomp->ant_decomp;
+    
     //imprimir numero de decomposicoes
-    printf("\n\n o numero maximo de combinacoes testadas com metodo mulder: %d", total_decomp);
+    printf("\n\nThe number of valid Translinear decompositions found is: %d", total_decomp);
+    printf("\n Number of partial fraction operations performed is: %d\n",global_num_parfrac);
+    
+    //retornar
+    return lista_decomp;
+}
+void encontra_decomp_parcial_primaria(vetor_decomp_simple *poly_acumulados, polinomio *base_primario, lista_expr *resto_primario, polinomio *base_secundario, lista_expr *resto_secundario, vetor_polinomios *lista_polinomios, int grau, vetor_decomp **retorno, int *total_decomp,tabela_literais *lista_literais,lista_expr *eq_entrada)
+{
+    vetor_polinomios *ptr_polinomios = lista_polinomios;
+    lista_expr *Q, *R, *R_dummy;
+    vetor_decomp_simple *decomp_atual;
+    int contador;
+    vetor_polinomios *poly_ptr;
+    
+    //sai imediatamente se tiver encontrado uma decomp
+    
+    //testa a base_primario com todos os polinomios, excluindo-se a propria base_primario
+    while (ptr_polinomios != NULL)
+    {
+        //testa primeiro se o polinomio nao Ž igual a base_primario
+        if (base_primario->id != ptr_polinomios->polinomio->id)
+        {
+            //limpar as variaveis
+            Q = NULL;
+            R = NULL;
+            R_dummy = NULL;
+            //testar a base_primario principal com o polinomio atual
+            if(partial_fraction_expansion(resto_primario, base_primario->P, ptr_polinomios->polinomio->P, &Q,&R, &R_dummy))
+            {
+                //limpar o R_dummy e o &Q
+                destroi_lista_expr_expandida(R_dummy);
+                destroi_lista_expr_expandida(Q);
+                
+                //copio o primario, pois pode ser semente para outras decomposicoes
+                decomp_atual = copia_decomp_simples(poly_acumulados);
+                
+                //insiro os polinomios que fazem parte da decomposi‹o
+                insere_polinomio(&decomp_atual->polinomios,ptr_polinomios->polinomio);
+                
+                //atualiza resto_primario par e resto_primario impar
+                decomp_atual->resto = R;
+                
+                //quando o numero de polinomios acumulados for igual ao grau menos 1 da equacao de entrada pode ser que j‡ tenha terminado
+                contador = 0;
+                poly_ptr = decomp_atual->polinomios;
+                while (poly_ptr != NULL)
+                {
+                    ++contador;
+                    poly_ptr = poly_ptr->proximo_polinomio;
+                }
+                
+                //somo um ao contador
+                contador++;
+                //vejo se ja terminou
+                if (contador == grau)
+                {
+                    //terminou de fazer uma decomposi‹o parcial, comear a procurar decomposi›es parciais no outro vetor
+                    encontra_decomp_parcial_secundaria(NULL,base_secundario, resto_secundario, lista_polinomios, grau, retorno, decomp_atual, base_primario, total_decomp,lista_literais,eq_entrada);
+                    //aqui todas as decomposi›es ter‹o sido inseridas dentro sda rotina da secundaria
+                    //*retorno = insere_decomp_simples(*retorno, decomp_atual);
+                    //destroi o vetor simple primario
+                    destroi_decomp_simples(decomp_atual);
+                    
+                }
+                //caso contrario, prosseguir com as decomposicoes parciais de forma recursiva
+                else
+                {
+                    //caso contrario, deve-se proceder com a decomposicao recursivamente
+                    encontra_decomp_parcial_primaria(decomp_atual, base_primario, R, base_secundario, resto_secundario, ptr_polinomios, grau,retorno, total_decomp,lista_literais,eq_entrada);
+
+                    //como as decomposi›es validas serao adicionadas no if acima, quando o programa chegar aqui, significa
+                    //que nao preciso mais de decomp_atual;
+                    destroi_decomp_simples(decomp_atual);
+                    decomp_atual = NULL;
+                }
+                
+            }
+            
+        }
+        
+        //incrementa o ponteiro
+        ptr_polinomios = ptr_polinomios->proximo_polinomio;
+    }
+    
     
 }
 
-
-
+void encontra_decomp_parcial_secundaria(vetor_decomp_simple *poly_acumulados, polinomio *base, lista_expr *resto, vetor_polinomios *lista_polinomios, int grau, vetor_decomp **retorno, vetor_decomp_simple *decomp_simples_primario, polinomio *base_primario, int *total_decomp,tabela_literais *lista_literais, lista_expr *eq_entrada)
+{
+    vetor_polinomios *ptr_polinomios = lista_polinomios;
+    lista_expr *Q, *R, *R_dummy;
+    vetor_decomp_simple *decomp_atual;
+    int contador;
+    vetor_polinomios *poly_ptr;
+    
+    //testa a base com todos os polinomios, excluindo-se a propria base
+    while (ptr_polinomios != NULL)
+    {
+        //testa primeiro se o polinomio nao Ž igual a base
+        if (base->id != ptr_polinomios->polinomio->id)
+        {
+            //limpar as variaveis
+            Q = NULL;
+            R = NULL;
+            R_dummy = NULL;
+            //testar a base principal com o polinomio atual
+            if(partial_fraction_expansion(resto, base->P, ptr_polinomios->polinomio->P, &Q,&R, &R_dummy))
+            {
+                //limpar o R_dummy e o &Q
+                destroi_lista_expr_expandida(R_dummy);
+                destroi_lista_expr_expandida(Q);
+                
+                //copio o primario, pois pode ser semente para outras decomposicoes
+                decomp_atual = copia_decomp_simples(poly_acumulados);
+                
+                //insiro os polinomios que fazem parte da decomposi‹o
+                insere_polinomio(&decomp_atual->polinomios,ptr_polinomios->polinomio);
+                
+                //atualiza Resto par e Resto impar
+                decomp_atual->resto = R;
+                
+                //quando o numero de polinomios acumulados for igual ao grau menos 1 da equacao de entrada pode ser que j‡ tenha terminado
+                contador = 0;
+                poly_ptr = decomp_atual->polinomios;
+                while (poly_ptr != NULL)
+                {
+                    ++contador;
+                    poly_ptr = poly_ptr->proximo_polinomio;
+                }
+                
+                //somo um ao contador
+                contador++;
+                //vejo se ja terminou
+                if (contador == grau)
+                {
+                    //terminou de fazer uma decomposi‹o parcial, chamar a compara_Decomp
+                    combina_decomp_mulder(decomp_atual, decomp_simples_primario, base, base_primario, eq_entrada, retorno, total_decomp, lista_literais);
+                    //*retorno = insere_decomp_simples(*retorno, decomp_atual);
+                    //apagar os vetores decomp_simple secundario
+                    destroi_decomp_simples(decomp_atual);
+                    
+                    
+                }
+                //caso contrario, prosseguir com as decomposicoes parciais de forma recursiva
+                else
+                {
+                    //caso contrario, deve-se proceder com a decomposicao recursivamente
+                    encontra_decomp_parcial_secundaria(decomp_atual, base, R, ptr_polinomios,grau, retorno, decomp_simples_primario,base_primario,total_decomp,lista_literais, eq_entrada);
+                    //como as decomposi›es validas serao adicionadas no if acima, quando o programa chegar aqui, significa
+                    //que nao preciso mais de decomp_atual;
+                    destroi_decomp_simples(decomp_atual);
+                    decomp_atual = NULL;
+                }
+                
+            }
+            
+        }
+        
+        //incrementa o ponteiro
+        ptr_polinomios = ptr_polinomios->proximo_polinomio;
+    }
+    
+    
+}
 
 

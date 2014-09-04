@@ -80,10 +80,13 @@ int main(int argc, char *argv[])
 //    int             fail_count = 0;
     int             lim_inferior;
     int             lim_superior;
+    unsigned int    diogo_parfrac, mulder_parfrac;
+//    vetor_correlacao_direta *correlacoes;
+    time_t   cronometro;
 #endif
     
 
-    
+    int i;
     token   *lista_token = NULL;
     tabela_literais *lista_literais = NULL;
     token *expressao_RPN = NULL;
@@ -105,27 +108,44 @@ int main(int argc, char *argv[])
     
 #if !defined (DEBUG_POLYDIV) && !defined (DEBUG_PARFRAC) &&!defined (DEBUG_VECTOR_GEN) && !defined (DEBUG_MEMORIA)
     //inicio
-    printf("NParametricTLDecomp  Copyright (C) 2014  Diogo Andrade \nThis program comes with ABSOLUTELY NO WARRANTY.\nThis is free software, and you are welcome to redistribute it under certain conditions.\n\nThis application performs non-parametric Translinear decomposition onto a homogeneous (all monomials having the same degree) multivariate polynomial.\nThe results are suitable for Translinear analog circuit realization with proper adjustments.\nIf an error occurs, send a brief description with the polynomial inserted to diogo007@gmail.com.\n\r \
-        Below, type the polynomial to be decomposed (100 characters maximum). Coefficients should be only integer numbers. \n\r\t Example:\n\r\t \
-        x^3 + x^2*y - x*z^2 + y*z^2\n\r  (Hit \"enter\" to use it)");
-   
-    //leitura da string de entrada
-    
-    if ( fgets (equacao_entrada, 100 , stdin) == NULL )
+    equacao_entrada[0] = '\0';
+    if (argv[1] != NULL)
     {
-        erro(ERRO_002);
-        return(0);  
+        i = 1;
+        while (argv[i] != NULL)
+        {
+            strcat(equacao_entrada, (char *)argv[i]);
+            i++;
+        }
+        lim_inferior = -3;
+        lim_superior = +3;
+        
+    }
+    else
+    {
+        printf("NParametricTLDecomp  Copyright (C) 2014  Diogo Andrade \nThis program comes with ABSOLUTELY NO WARRANTY.\nThis is free software, and you are welcome to redistribute it under certain conditions.\n\nThis application performs non-parametric Translinear decomposition onto a homogeneous (all monomials having the same degree) multivariate polynomial.\nThe results are suitable for Translinear analog circuit realization with proper adjustments.\nIf an error occurs, send a brief description with the polynomial inserted to diogo007@gmail.com.\n\r \
+               Below, type the polynomial to be decomposed (100 characters maximum). Coefficients should be only integer numbers. \n\r\t Example:\n\r\t \
+               x^3 + x^2*y - x*z^2 + y*z^2\n\r  (Hit \"enter\" to use it)");
+        
+        //leitura da string de entrada
+        
+        if ( fgets (equacao_entrada, 100 , stdin) == NULL )
+        {
+            erro(ERRO_002);
+            return(0);
+        }
+        
+        //equacao padrao, caso o usuario aperte enter direto. pode ser igual a nova linha ou retorno de carro para tratar como o sistema operacional reconhece o ENTER em varias plataformas diferentes
+        if (*equacao_entrada == '\n' || *equacao_entrada == '\r')
+            sprintf(equacao_entrada, "x^3 + x^2*y - x*z^2 + y*z^2");
     }
     
-    //equacao padrao, caso o usuario aperte enter direto. pode ser igual a nova linha ou retorno de carro para tratar como o sistema operacional reconhece o ENTER em varias plataformas diferentes
-    if (*equacao_entrada == '\n' || *equacao_entrada == '\r')
-        sprintf(equacao_entrada, "x^3 + x^2*y - x*z^2 + y*z^2");
     
 #endif
     
 #if defined (DEBUG_VECTOR_GEN)
    
-    sprintf(equacao_entrada, "3*a+b^2");
+     sprintf(equacao_entrada, "x^3 + x^2*y - x*z^2 + y*z^2");
     lim_inf = -1;
     lim_sup = +1;
     //sprintf(equacao_entrada, "X^3 + X^2*Y - X*Z^2 + Y*Z^2");
@@ -136,8 +156,8 @@ int main(int argc, char *argv[])
     //teste da divisao polinomial
 #if defined (DEBUG_POLYDIV)
     //polinomio numerador
-    sprintf(equacao_entrada, "-3*X+3*Y");
-    //sprintf(equacao_entrada, "X^3 + X^2*Y - X*Z^2 + Y*Z^2");
+    sprintf(equacao_entrada, "36*(6*x +5*y +6*z )*(x +y )*(-x +5*y +z ) -36*(5*x +5*y +4*z )*(5*x +5*y +3*z)*y" );
+    //sprintf(equacao_entrada, "x^3 + x^2*y - x*z^2 + y*z^2");
     
 #endif
     
@@ -149,7 +169,9 @@ int main(int argc, char *argv[])
     
     //polinomio numerador
     //sprintf(equacao_entrada, "X^3 + X^2*Y - X*Z^2 + Y*Z^2");
-    sprintf(equacao_entrada, "X");
+    //sprintf(equacao_entrada, "X");
+    //sprintf(equacao_entrada, "x^5*(y-2*z+2*k)-y^2*(x+z-k)^2*(x-2*z)*k");
+     sprintf(equacao_entrada, "x^3 + x^2*y - x*z^2 + y*z^2");
 #endif
     
 #if defined (DEBUG_MEMORIA)
@@ -206,8 +228,8 @@ int main(int argc, char *argv[])
 
 #if defined (DEBUG_POLYDIV) 
     //polinomio denominador
-    //sprintf(divisor_entrada, "2*Iin+I0");
-    sprintf(divisor_entrada, " -X+Y");
+    sprintf(divisor_entrada, "(6*x +5*y +6*z )");
+    //sprintf(divisor_entrada, " 2*(x +y +z )*(x )*(z ) -(x +y )*(x +z )*(x +z )");
     token_divisor = le_tokens(divisor_entrada);
     constroi_tabela_literais(&lista_literais, token_divisor);
     expressao_RPN_divisor = constroi_lista_expr(token_divisor);    
@@ -224,7 +246,7 @@ int main(int argc, char *argv[])
     //polinomios denominadores
     //P1
     //sprintf(divisor_entrada, "I0 +Iin");
-    sprintf(divisor_entrada, "-X+Z");
+    sprintf(divisor_entrada, "-x+z");
     token_divisor = le_tokens(divisor_entrada);
     constroi_tabela_literais(&lista_literais, token_divisor);
     expressao_RPN_divisor = constroi_lista_expr(token_divisor);    
@@ -247,7 +269,7 @@ int main(int argc, char *argv[])
     
     //P2
    // sprintf(divisor_entrada, "Iin+I0+Iout");
-    sprintf(divisor_entrada, "Z");
+    sprintf(divisor_entrada, "x");
     token_divisor = le_tokens(divisor_entrada);
     constroi_tabela_literais(&lista_literais, token_divisor);
     expressao_RPN_divisor = constroi_lista_expr(token_divisor);    
@@ -572,12 +594,17 @@ getchar();
 //processamento principal do aplicativo
 #if !defined (DEBUG_POLYDIV) && !defined (DEBUG_PARFRAC) &&!defined (DEBUG_VECTOR_GEN) && !defined (DEBUG_MEMORIA)
 
+/***********************
+ Base-Polynomial generation and reduction
+ ***************************/
+
     //imprimir a lista de literais e construir o polinomio base
     
     polinomio_base = gera_polinomio_base(lista_literais);
-    
+if (argv[1] == NULL)
+{
     //leitura dos limites superiores e inferiores dos coeficientes
-    printf("\n Insert the inferior limit of variables coefficients (standard -1))");
+    printf("\n Insert the inferior limit of variables coefficients (standard -1)");
     if ( fgets (equacao_entrada, 100 , stdin) == NULL )
     {
         erro(ERRO_002);
@@ -609,15 +636,15 @@ getchar();
     {
         lim_superior = atoi(equacao_entrada);
     }
-    
+}
     //imprimir os parametros colhidos
     printf("\n Expanded, simplified and re-ordered Polynomial:");
     imprime_lista_expr_expandida(expr_simplificada, lista_literais);
     printf("\n coefficient inferior limit: %d", lim_inferior);
-    printf("\n coefficient superior limit: %d", lim_superior);
+    printf("\n coefficient superior limit: %d\n", lim_superior);
     
-    printf("\n Press any key to continue...\n");
-    getchar();
+//    printf("\n Press any key to continue...\n");
+//    getchar();
     
     //construcao dos vetores, aqui com coeficientes especificados pelo usuario
     lista_polinomios = gera_vetor(lista_polinomios, polinomio_base, polinomio_base,lim_inferior, lim_superior);
@@ -640,11 +667,11 @@ getchar();
         // printf("\n");
         percorre_polinomios = percorre_polinomios->proximo_polinomio;
     }
-    printf("\n Total number of Base-Polynomials generated is: %d",contador);
-    printf("\n Press any key to continue...\n");
-    getchar();
+    printf("\n Total number of Base-Polynomials generated (T0 set) is: %d\n",contador);
+ //   printf("\n Press any key to continue...\n");
+ //   getchar();
 
-
+inicia_cronometro(&cronometro);
     //elimina o polinomio nulo
     lista_polinomios = elimina_zero(lista_polinomios);
     
@@ -662,11 +689,13 @@ getchar();
         // printf("\n");
         percorre_polinomios = percorre_polinomios->proximo_polinomio;
     }
-    printf("\n Number of Base-Polynomials after removing strict negative BP's is: %d",contador);
-    printf("\n Press any key to continue...\n");
-    getchar();
+    printf("\n Number of Base-Polynomials after removing strict negative BP's (T1 set) is: %d\n",contador);
+para_cronometro(&cronometro);
+//    printf("\n Press any key to continue...\n");
+//    getchar();
 
     //elimina os polinomios redundantes
+inicia_cronometro(&cronometro);
     lista_polinomios = remove_polinomios_redundantes(lista_polinomios);
 
     //contagem apos-redundantes
@@ -680,11 +709,13 @@ getchar();
         // printf("\n");
         percorre_polinomios = percorre_polinomios->proximo_polinomio;
     }
-    printf("\n Number of Base-Polynomials after redundancy removal (set T1) is: %d",contador);
-    printf("\n Press any key to continue...\n");
-    getchar();
-    
-    //gerar as sementes 
+    printf("\n Number of Base-Polynomials after redundancy removal (T2 set) is: %d\n",contador);
+para_cronometro(&cronometro);
+//    printf("\n Press any key to continue...\n");
+//    getchar();
+
+    //gerar as sementes
+inicia_cronometro(&cronometro);
     lista_sementes = gera_vetor_semente(lista_polinomios, expr_simplificada);
 
     //conta quantos vetores-semente existem
@@ -697,31 +728,251 @@ getchar();
         // printf("\n");
         percorre_sementes = percorre_sementes->conjunto_prox;
     }
-    printf("\n Number of Base-Polynomial pairs (T2 set) is: %d",contador2);
-    printf("\n Press any key to continue...\n");
-    getchar();
+    printf("\n Number of Base-Polynomial pairs (T3 set) is: %d\n",contador2);
+para_cronometro(&cronometro);
+//    printf("\n Press any key to continue...\n");
+//    getchar();
 
-//calculo do pior caso para o meu algoritmo
-lim_superior = 0;
-for(lim_inferior=contador2;lim_inferior>=1;lim_inferior--)
+/*//imprime as sementes
+percorre_sementes = lista_sementes;
+contador = 0;
+while (percorre_sementes!= NULL)
 {
-    lim_superior += lim_inferior;
+    contador++;
+    printf("\n");
+    imprime_lista_expr_expandida(percorre_sementes->P1.P, lista_literais);
+    printf(" e ");
+    imprime_lista_expr_expandida(percorre_sementes->P2.P, lista_literais);
+    
+    printf("\n");
+
+    percorre_sementes = percorre_sementes->conjunto_prox;
 }
+printf("\n numero de pares encontrados: %d",contador);
+getchar(); */
 
-printf("\n Worst case number of attempts using this alfgorithm is: %d",lim_superior);
+    //refazer T4 após T3 ter sido gerado
+    lista_polinomios = reconta_polinomios(lista_sementes,lista_polinomios);
 
-//calculo de pior caso para o mulden
+    //contagem pós-geracao de T3
+    percorre_polinomios = lista_polinomios;
+    contador = 0;
+    while (percorre_polinomios != NULL)
+    {
+        contador++;
+        // imprime_lista_expr_expandida(percorre_polinomios->polinomio, lista_literais);
+        // printf("\n");
+        percorre_polinomios = percorre_polinomios->proximo_polinomio;
+    }
+    printf("\n Number of Base-Polynomials after seed generation (reduced set T4) is: %d\n",contador);
+//    printf("\n Press any key to continue...\n");
+//    getchar();
+/*
+    //imprime apenas os polinomios utilizados em alguma decomposicao
+    printf("\n The base polynomials from reduced set T4 are:\n");
+    percorre_polinomios = lista_polinomios;
+    contador = 0;
+    while (percorre_polinomios != NULL)
+    {
+        contador++;
+        imprime_lista_expr_expandida(percorre_polinomios->polinomio->P, lista_literais);
+        //imprime o identificador do polinomio
+        printf(" \t%d\n",percorre_polinomios->polinomio->id);
+        percorre_polinomios = percorre_polinomios->proximo_polinomio;
+    }*/
+/*
 
-lim_superior = contador2*(contador - 1)*2;
-printf("\n Worst case number of attempts using Mulder's agorithm is: %d",lim_superior);
-printf("\n Press any key to continue...\n");
-getchar();
-    //calcula o numero total de testes a serem feitos
-    //encontra_decomp_dummie(lista_sementes, deg(expr_simplificada));
+    //calculo do pior caso para o meu algoritmo
+    lim_superior = contador2*contador2;
+    printf("\n Worst case number of attempts using this algorithm is: %d",lim_superior);
 
-    //encontra o total de testes pelo metodo mulder
-    //encontra_decomp_dummie_mulder(lista_sementes,lista_polinomios, deg(expr_simplificada));
+    //calculo de pior caso para o mulden
 
+    lim_superior = contador2*contador;
+    printf("\n Worst case number of attempts using Mulder's algorithm is: %d",lim_superior);
+    printf("\n Press any key to continue...\n");
+//    getchar();*/
+
+/***********************
+Recursive Division By BP pairs
+***********************/
+
+    //First run mulder's algorithm
+    printf("\n Performing Mulder's algorithm...");
+    global_num_parfrac = 0;
+inicia_cronometro(&cronometro);
+decomposicoes_encontradas = NULL;
+    decomposicoes_encontradas = encontra_decomp_mulder(lista_polinomios, deg(expr_simplificada), expr_simplificada, lista_literais);
+para_cronometro(&cronometro);
+
+    //stores how many partial fraction expansion were performed with mulder's algorithm
+  //  mulder_parfrac = global_num_parfrac;
+
+    //cleans-up memory to perform Diogo's algorithm
+ //   destroi_vetor_decomp(decomposicoes_encontradas);
+//    decomposicoes_encontradas = NULL;
+/*    global_num_parfrac = 0;
+
+    //performs diogo's decomposition
+//    printf("\n Performing Diogo's algorithm...");
+inicia_cronometro(&cronometro);
+    decomposicoes_encontradas = encontra_decomp(lista_sementes,deg(expr_simplificada), expr_simplificada, lista_literais);
+para_cronometro(&cronometro);
+    diogo_parfrac = global_num_parfrac; */
+
+    //testa quantos PB's de fato fizeram parte de alguma decomposicao
+    lista_polinomios = remove_polinomios_nao_pertencentes(decomposicoes_encontradas,lista_polinomios);
+/*
+    // prints comparative results
+    if (mulder_parfrac > diogo_parfrac)
+     {
+     printf("\n Diogo's algorithm performed less partial fraction expansions then Mulder's algorithm by %d%c",(100 -(diogo_parfrac*100)/(mulder_parfrac)),'%');
+     }
+     else if (diogo_parfrac > mulder_parfrac)
+     {
+     printf("\n Mulder's algorithm performed less partial fraction expansions then Diogo's algorithm by %d%c",(100 -(mulder_parfrac*100)/(diogo_parfrac)),'%');
+     }
+     else //they are equal
+     {
+     printf("\n Diogo's algorithm performed the same amount of partial fraction expansio as Mulder's");
+     }
+*/
+    //contagem pós-encontrar decomposicoes
+    percorre_polinomios = lista_polinomios;
+    contador = 0;
+    while (percorre_polinomios != NULL)
+    {
+        contador++;
+        // imprime_lista_expr_expandida(percorre_polinomios->polinomio, lista_literais);
+        // printf("\n");
+        percorre_polinomios = percorre_polinomios->proximo_polinomio;
+    }
+
+    printf("\n Number of Base-Polynomials effectively used in any decompositions (extremely reduced set T1) is: %d",contador);
+    printf("\n Press any key to continue...\n");
+    global_num_parfrac = 0;
+//    getchar();
+
+    //elimina o lixo da memoria
+    destroi_vetor_decomp(decomposicoes_encontradas);
+    destroi_lista_sementes(lista_sementes);
+    decomposicoes_encontradas = NULL;
+    lista_sementes = NULL;
+
+/**************
+ Algorithm re-run after obtaining extremely reduced BP set
+ ****************/
+
+printf("\n Re-running the algorithms with the extremely reduced set T1");
+    //gerar as sementes
+//    lista_sementes = gera_vetor_semente(lista_polinomios, expr_simplificada);
+
+    //conta quantos vetores-semente existem
+ /*   percorre_sementes = lista_sementes;
+    contador2 = 0;
+    while (percorre_sementes != NULL)
+    {
+        contador2++;
+        // imprime_lista_expr_expandida(percorre_polinomios->polinomio, lista_literais);
+        // printf("\n");
+        percorre_sementes = percorre_sementes->conjunto_prox;
+    }
+    printf("\n Number of Base-Polynomial pairs (refined T2 set) is: %d",contador2);
+    printf("\n Press any key to continue...\n");
+//    getchar();
+
+    //calculo do pior caso para o meu algoritmo
+    lim_superior = 0;
+    for(lim_inferior=contador2;lim_inferior>=1;lim_inferior--)
+    {
+        lim_superior += lim_inferior;
+    }
+
+    printf("\n Worst case number of attempts using this alfgorithm is: %d",lim_superior);
+
+    //calculo de pior caso para o mulden
+
+    lim_superior = contador2*(contador - 1)*2;
+    printf("\n Worst case number of attempts using Mulder's agorithm is: %d",lim_superior);
+//    printf("\n Press any key to continue...\n");
+//    getchar();
+ */
+
+    //zera novamente o mnumero de fracoes parciais
+    global_num_parfrac = 0;
+
+    //realiza o algoritmo do mulder
+    printf("\n Performing Mulder's algorithm...");
+inicia_cronometro(&cronometro);
+    decomposicoes_encontradas = encontra_decomp_mulder(lista_polinomios, deg(expr_simplificada), expr_simplificada, lista_literais);
+para_cronometro(&cronometro);
+    mulder_parfrac = global_num_parfrac;
+
+    //elimina o lixo da memoria
+    destroi_vetor_decomp(decomposicoes_encontradas);
+    decomposicoes_encontradas = NULL;
+/*
+    //refaz o nosso algoritmo para verificar se consegue só com os efetivamente usados
+    global_num_parfrac = 0;
+    //realiza a decomposição
+    printf("\n Performing Diogo's algorithm...");
+inicia_cronometro(&cronometro);
+    decomposicoes_encontradas = encontra_decomp(lista_sementes,deg(expr_simplificada), expr_simplificada, lista_literais);
+para_cronometro(&cronometro);
+
+    diogo_parfrac = global_num_parfrac;
+    //elimina o lixo da memoria
+    destroi_vetor_decomp(decomposicoes_encontradas);
+
+    //prints comparative result
+    if (mulder_parfrac > diogo_parfrac)
+    {
+        printf("\n Diogo's algorithm performed less partial fraction expansions then Mulder's algorithm by %d%c",(100 -(diogo_parfrac*100)/(mulder_parfrac)),'%');
+    }
+    else if (diogo_parfrac > mulder_parfrac)
+    {
+        printf("\n Mulder's algorithm performed less partial fraction expansions then Diogo's algorithm by %d%c",(100 -(mulder_parfrac*100)/(diogo_parfrac)),'%');
+    }
+    else //they are equal
+    {
+        printf("\n Diogo's algorithm performed the same amount of partial fraction expansionsas Mulder's");
+    }
+
+    //imprime apenas os polinomios utilizados em alguma decomposicao
+    printf("\n The base polynomials used in any of the decompositions found are:\n");
+    percorre_polinomios = lista_polinomios;
+    contador = 0;
+    while (percorre_polinomios != NULL)
+    {
+        contador++;
+        imprime_lista_expr_expandida(percorre_polinomios->polinomio->P, lista_literais);
+        //imprime o identificador do polinomio
+        printf(" \t%d\n",percorre_polinomios->polinomio->id);
+        percorre_polinomios = percorre_polinomios->proximo_polinomio;
+    }
+///imprime as sementes
+ percorre_sementes = lista_sementes;
+ contador = 0;
+ while (percorre_sementes!= NULL)
+ {
+ contador++;
+ printf("\n");
+ imprime_lista_expr_expandida(percorre_sementes->P1.P, lista_literais);
+ printf(" e ");
+ imprime_lista_expr_expandida(percorre_sementes->P2.P, lista_literais);
+ 
+ printf("\n");
+ 
+ percorre_sementes = percorre_sementes->conjunto_prox;
+ }
+ printf("\n numero de pares encontrados: %d",contador);
+ getchar();
+ */
+//fazer os testes do novo algoritmo aqui
+//lista_sementes = ordena_vetor_semente(lista_sementes);
+//correlacoes = constroi_correlacao_direta(lista_sementes);
+//imprime_correlacoes_diretas(correlacoes);
+//fim testes
 
     //aqui eu já posso destruir a lista de polinomios
     //destroi o vetor de polinomios
@@ -735,12 +986,9 @@ getchar();
     }
     destroi_lista_expr_expandida(polinomio_base);
 
-    //realiza a decomposição
-    decomposicoes_encontradas = encontra_decomp(lista_sementes,deg(expr_simplificada), expr_simplificada, lista_literais);
-
-    //elimina o lixo da memoria
-    destroi_vetor_decomp(decomposicoes_encontradas);
+    //e o vetor sementes
     destroi_lista_sementes(lista_sementes);
+
 
 #endif
     destroi_tabela_literais(lista_literais);
@@ -749,7 +997,7 @@ getchar();
     destroi_lista_expr(expressao_RPN);
     destroi_lista_expr_expandida(expr_simplificada);
 printf("\nPress any key to continue...");
-getchar();
+//getchar();
     return 0;
 }
            
