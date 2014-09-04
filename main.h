@@ -35,10 +35,6 @@
 //#define DEBUG_EXPR
 //#define DEBUG_EXPAND
 //#define DEBUG_SIMPLIFY
-//#define DEBUG_POLYDIV
-//#define DEBUG_PARFRAC
-//#define DEBUG_VECTOR_GEN
-//#define DEBUG_MEMORIA
 
 //Mensagens de erro
 #define ERRO_001    "ERRO: Memoria Insuficiente"
@@ -134,8 +130,6 @@ typedef struct _vetor_sementes
     
 }vetor_sementes;
 
-
-
 //estrutura que guarda decomposição paramétrica encontrada
 typedef struct _vetor_decomp
 {
@@ -161,70 +155,14 @@ typedef struct _vetor_decomp_simple
     
 } vetor_decomp_simple;
 
-
-//estruturas de dados para o algoritmo novo
-//apenas a lista de id's de polinomios que um polinômio-base se correlaciona
-typedef struct _vetor_id_polinomios
-{
-    int id_polinomio;
-    
-    struct _vetor_id_polinomios *prox_poly;
-    struct _vetor_id_polinomios *ant_poly;
-    
-} vetor_id_polinomios;
-//vetor de correlação entr cada polinomio-base e todos os que podem, junto ocm ele, fazer parte de uma decomposição opostamente conectados.
-typedef struct _vetor_correlacao_direta
-{
-    
-    int id_polinomio_base;
-    vetor_id_polinomios *poly_correlatos;
-    
-    struct _vetor_correlacao_direta *prox_corr;
-    struct _vetor_correlacao_direta *ant_corr;
-    
-} vetor_correlacao_direta;
-//apenas um agrupamento de "r" polinomios que se correlaciona com outro
-typedef struct _vetor_decomp_parcial
-{
-	int id_decomposicao_parcial;
-    vetor_id_polinomios *id_poly_decomp_parcial;
-    vetor_id_polinomios *id_polinomios_base;
-    
-	vetor_polinomios	*polys_decomp_parcial;
-    
-    struct vetor_decomp_parcial *prox_decomp_parcial;
-    struct vetor_decomp_parcial *ant_decomp_parcial;
-    
-} vetor_decomp_parcial;
-//vetor de correlação inversa. Cada grupo de polinômios gerado pela correlação inversa se correlaciona com os polinômios que os originaram
-typedef struct _vetor_correlacao_decomps
-{
-    
-    vetor_decomp_parcial *originaria;
-	vetor_decomp_parcial *derivadas;
-    
-    struct vetor_correlacao_direta *prox_corr;
-    struct vetor_correlacao_direta *ant_corr;
-    
-} vetor_correlacao_decomps;
-
-//tempo
-typedef struct _tempo
-{
-    unsigned long int dias;
-    unsigned int horas;
-    unsigned long int segundos;
-    unsigned int minutos;
-} tempo;
-
 //globais
+
 //variavel global para debug
 int global = 0;
 //contador de frações parciais executadas
 unsigned int global_num_parfrac = 0;
 
 //definições para a struct
-
 #define tipo_literal     1
 #define tipo_parametro  2
 #define tipo_operador   3
@@ -236,7 +174,7 @@ unsigned int global_num_parfrac = 0;
 #define operador_multiplicacao  3
 #define operador_potenciacao    4
 #define operador_negacao        5
-//TODO #define operador_divis„o 4
+
 
 //tipos de abre_fecha
 #define abre_parenteses     0
@@ -245,9 +183,6 @@ unsigned int global_num_parfrac = 0;
 //protótipos de funções de análise léxica
 void erro (char* );
 token *le_tokens(char *);
-/*int isdigit(char );
-int isalpha (char );
-int isspace(char );*/
 int isoperator (char );
 int isabre_fecha (char );
 
@@ -272,8 +207,6 @@ arvore_expr *retira_pilha_arvore (pilha_arvore **);
 void destroi_arvore_expr(arvore_expr *);
 void destroi_lista_expr( token *);
 
-
-
 //protótipo das funções de expansor de expressões
 void string_sort(char **);
 lista_expr *constroi_lista_expressoes_exp(arvore_expr *);
@@ -284,7 +217,6 @@ void destroi_lista_expr_expandida(lista_expr *);
 lista_expr *simplifica_expr_expandida(lista_expr *);
 lista_expr *remove_lista_expr(lista_expr *, lista_expr *);
 lista_expr *copia_lista_expr(lista_expr *);
-
 
 //protótipo de funções de divisão polinomial
 int lexdeg(char *, char *);
@@ -299,7 +231,6 @@ lista_expr *constroi_elemento_zerado(void);
 int partial_fraction_expansion(lista_expr *, lista_expr *, lista_expr *,lista_expr **, lista_expr **, lista_expr **);
 lista_expr *substitui_var(lista_expr *, lista_expr *, char );
 
-
 //protótipo das funcoes de geracao do vetor de polinomios
 vetor_polinomios *gera_vetor(vetor_polinomios *, lista_expr *, lista_expr *, int , int );
 vetor_polinomios *elimina_zero(vetor_polinomios *);
@@ -310,7 +241,6 @@ vetor_polinomios *remove_polinomios_negativos (vetor_polinomios *);
 vetor_polinomios *remove_polinomios_redundantes (vetor_polinomios *);
 vetor_polinomios *reconta_polinomios(vetor_sementes *,vetor_polinomios *);
 vetor_polinomios *remove_polinomios_nao_pertencentes(vetor_decomp *,vetor_polinomios *);
-
 
 //prototipo das funcoes que implementam o algoritmo propriamente dito
 int deg(lista_expr *);
@@ -337,6 +267,8 @@ int compara_decomp(vetor_decomp *, vetor_decomp *);
 //funcoes que implementam o algoritmo do mulder
 void combina_decomp_mulder(vetor_decomp_simple *, vetor_decomp_simple *,polinomio *, polinomio *, lista_expr *, vetor_decomp **, int *, tabela_literais *);
 vetor_decomp *encontra_decomp_mulder(vetor_polinomios *, int , lista_expr *, tabela_literais *);
+vetor_decomp *encontra_decomp_mulder_safe(vetor_polinomios *, int , lista_expr *, tabela_literais *);
+
 void encontra_decomp_parcial(vetor_decomp_simple *, polinomio *, lista_expr *, vetor_polinomios *, int grau, vetor_decomp_simple **);
 vetor_decomp_simple *copia_decomp_simples(vetor_decomp_simple *);
 vetor_decomp_simple *novo_vetor_decomp_simples(void);
@@ -349,20 +281,10 @@ void destroi_vetor_decomp_simples(vetor_decomp_simple *);
 void encontra_decomp_parcial_primaria(vetor_decomp_simple *, polinomio *, lista_expr *, polinomio *, lista_expr *, vetor_polinomios *, int , vetor_decomp **, int *,tabela_literais *, lista_expr *);
 void encontra_decomp_parcial_secundaria(vetor_decomp_simple *, polinomio *, lista_expr *, vetor_polinomios *, int , vetor_decomp **, vetor_decomp_simple *, polinomio *base_primario, int *,tabela_literais *, lista_expr *);
 
-//funções do algoritmo de corre;lação
-vetor_sementes *ordena_vetor_semente(vetor_sementes *);
-void imprime_correlacoes_diretas(vetor_correlacao_direta *);
-void insere_id_polinomios_correlatos(vetor_correlacao_direta *, int );
-vetor_correlacao_direta *novo_vetor_correlacao_direta(void);
-vetor_correlacao_direta *constroi_correlacao_direta(vetor_sementes *);
-
-
 //funcoes de tamanho de memoria
 int decomp_size(vetor_decomp *);
 int poly_size(vetor_polinomios *);
 int expr_size(lista_expr *);
-
-
 
 //protótipo das funcoes de interface
 void imprime_lista_expr_expandida(lista_expr *, tabela_literais *);
@@ -370,8 +292,6 @@ void print_monomio(char *, tabela_literais *);
 void imprime_arvore_expr(arvore_expr *);
 void imprime_tokens(token* );
 void imprime_decomposicao(vetor_decomp *, tabela_literais *);
-
-
 
 //erro - imprime uma mensagem de erro na tela
 void erro (char* n_erro)
@@ -408,7 +328,6 @@ token *le_tokens(char *equacao_entrada)
                 //operadores matematicos
                 if (isoperator(*(equacao_entrada + cont)))
                 {
-
                     //cria um token na lista
                     token_atual = cria_token(&lista_token);
                     
@@ -471,14 +390,11 @@ token *le_tokens(char *equacao_entrada)
                     //muda o estado
                     estado = 2;
                     
-                    //há um erro aqui. quando está lendo o ultimo caractere, e atualiza cont após o break, o laço é interrompido, pois cehga no \0
-                    
                     break;
                 }
                 //abre e fecha parenteses
                 if (isabre_fecha(*(equacao_entrada + cont)))
                 {
-
                     //cria um token na lista
                     token_atual = cria_token(&lista_token);
                     
@@ -569,35 +485,6 @@ token *le_tokens(char *equacao_entrada)
     return (lista_token);
 }
 
-//isdigit - verifica se um caracter È um dÌgito
-/*int isdigit(char digito)
-{
-    if( (digito >= '0') && (digito <= '9'))
-        return TRUE;
-    else
-        return FALSE;  
-}
-
-//isalpha - verifica se um caracter È uma letra do alfabeto ou underline
-int isalpha (char digito)
-{
-    if (((digito >= 'a') && (digito <= 'z')) || ((digito >= 'A') && (digito <= 'Z')) || (digito == '_'))
-            return TRUE;
-    else
-        return FALSE;
-}
- //isspace - verifica se o caracter È um espaÁo em brtanco ou pula-linha
- int isspace(char digito)
- {
- if ((digito == ' ') || (digito == '\t') || (digito == '\n'))
- {
- 
- return TRUE;
- }
- else
- return FALSE;
- }*/
-
 //isoperator - verifica se o caracter È um operador matem·tico
 int isoperator (char digito)
 {
@@ -615,7 +502,6 @@ int isabre_fecha (char digito)
     else
         return FALSE;
 }
-
 
 //cria_token - aloca memoria para um novo token no fim da fila e retorna o ponteiro para ele
 token *cria_token(token **lista_token)
@@ -677,7 +563,6 @@ void destroi_lista( token *lista)
     free(lista);
 }
 
-
 //percorre a lista imprimindo os tokens encontrados
 void imprime_tokens(token *lista_token)
 {
@@ -719,7 +604,6 @@ char insere_tabela_literais(tabela_literais **lista_literais, char *literal)
     //verifica se a lista est· vazia e a cria se necess·rio
     if ((*lista_literais) == NULL)
     {
-        
         if (((*lista_literais) = (tabela_literais *)malloc(sizeof(tabela_literais))) != NULL)
         {
             //alocar memoria e copiar a string
@@ -803,7 +687,6 @@ void constroi_tabela_literais(tabela_literais **lista_literais, token *lista_tok
     }
 }
 
-
 //Funcoes de manipulação da pilha
 
 //destruicao de pilhas
@@ -855,13 +738,11 @@ token *retira_pilha (pilha_expr **pilha)
     
     //retorna o elemento
     return(elemento);
-    
 }
 
 //construir pilha de operandos e operadores
 token *constroi_lista_expr(token *lista_token)
-{   
-    
+{
     //crio uma variavel para percorrer a lista de tokens
 	token *p_lista = lista_token;
     //crio a pilha de operadores
@@ -954,7 +835,6 @@ token *constroi_lista_expr(token *lista_token)
     return(lista_expressao);
 }
 
-
 void imprime_lista_expr(token *lista)
 {
     token   *p_lista = lista;
@@ -983,7 +863,6 @@ void imprime_lista_expr(token *lista)
         p_lista = p_lista->proximo_token;
     }
 }
-
 
 //inserir um elemento na lista encadeada dupla d expressões
 int insere_lista_expr(token **lista, token *elemento)
@@ -1019,7 +898,6 @@ int insere_lista_expr(token **lista, token *elemento)
         
         return (1); //sucesso
     }
-    
 }
 
 //prioridade_operador -> funcao que retorna a precedencia do oeprador, sendo que um numero menor signigfica maior prioridade
@@ -1187,9 +1065,6 @@ void destroi_arvore_expr(arvore_expr *arvore)
         free((void*)arvore);
     }
 }
-        
-        
-        
 
 //funcao que imprime a expressao da arvore
 void imprime_arvore_expr(arvore_expr *arvore)
@@ -1228,7 +1103,6 @@ void imprime_arvore_expr(arvore_expr *arvore)
     }
 }
 
-
 //função que reordena um astring em ordem alfabética
 void string_sort(char **input)
 {
@@ -1263,7 +1137,6 @@ void string_sort(char **input)
             p_input++;
 		}
 	} while(flag);
-    
 }
 
 //funcao que imprime a expressao da arvore
@@ -1308,7 +1181,6 @@ lista_expr *constroi_lista_expressoes_exp(arvore_expr *arvore)
                 elemento_lista->parametro = 1.0;	
                 elemento_lista->proximo = NULL;
                 elemento_lista->anterior = NULL;
-                
                 break;
  
             case tipo_parametro:
@@ -1326,7 +1198,6 @@ lista_expr *constroi_lista_expressoes_exp(arvore_expr *arvore)
                 elemento_lista->parametro = (double)(arvore->elemento->parametro);	
                 elemento_lista->proximo = NULL;
                 elemento_lista->anterior = NULL;
-                
                 break;
             
             //aqui estará a maior complexidade do codigo, onde as expansoes serao de fato realizadas
@@ -1348,7 +1219,6 @@ lista_expr *constroi_lista_expressoes_exp(arvore_expr *arvore)
                         //recupera o inicio da lista
                         while (elemento_lista->anterior != NULL) 
                             elemento_lista = elemento_lista->anterior;
-
                         break;
                         
                     case operador_menos:  
@@ -1377,7 +1247,6 @@ lista_expr *constroi_lista_expressoes_exp(arvore_expr *arvore)
                         //recupera o inicio da lista
                         while (elemento_lista->anterior != NULL) 
                             elemento_lista = elemento_lista->anterior;
-                        
                         break;
                         
                     case operador_negacao:
@@ -1396,7 +1265,6 @@ lista_expr *constroi_lista_expressoes_exp(arvore_expr *arvore)
                         
                         //como nao há operando na nó esquerdo, não há o que concatenar
                         elemento_lista = no_dir;
-                        
                         break;
                         
                     case operador_multiplicacao: 
@@ -1486,8 +1354,6 @@ lista_expr *constroi_lista_expressoes_exp(arvore_expr *arvore)
                 }   
                 break;
         }
-
-
     }
     return(elemento_lista);
 }
@@ -1501,8 +1367,6 @@ lista_expr *multiplica_expr( lista_expr *no_esq, lista_expr *no_dir)
     lista_expr *p_elemento_esq; //ponteiro para percorrer a lista da sub-arvore esquerda
     lista_expr *p_elemento_dir; //ponteiro para percorrer a lista da sub-arvore direita
     int temp;
-    
-    
     
     //aqui deve-se combinar todos os elementos da lista esquerda com os da lista direita, gerando uma nova lista
     //no processo que deverá ser desalocada ao final da operação.
@@ -1564,12 +1428,6 @@ lista_expr *multiplica_expr( lista_expr *no_esq, lista_expr *no_dir)
         
             //inicializar o ponteiro do denominador
             elemento->codigos_denominador = NULL;
-        
-            //definir o sinal do elemento (equivale a um xor)
-           /* if(p_elemento_esq->sinal == p_elemento_dir->sinal)
-                elemento->sinal = operador_mais;
-            else 
-                elemento->sinal = operador_menos;*/
                 
             //multiplicar os parametros
             elemento->parametro = p_elemento_esq->parametro * p_elemento_dir->parametro;
@@ -1587,18 +1445,15 @@ lista_expr *multiplica_expr( lista_expr *no_esq, lista_expr *no_dir)
             //incrementa o ponteiro da lista do nó da direita
             p_elemento_dir = p_elemento_dir->proximo;
         }
-    
         //avanço o ponteiro da lista do nó esquerdo
         p_elemento_esq = p_elemento_esq->proximo;
     
         //reseto o ponteiro da sub-arvore esquerda
         p_elemento_dir = no_dir;
     }
-
     //aproveitando que a lista é duplamente encadeada, eu posso recuperar o inicio atraves dos ponteiros para anterior
     while (elemento->anterior != NULL)
         elemento = elemento->anterior;
-    
     return (elemento);
 }
 
@@ -1647,7 +1502,6 @@ void imprime_lista_expr_expandida(lista_expr *lista, tabela_literais *tabela)
                 printf("%2.2f",p_lista->parametro);
             }
 
-        
         //imprime o numerador
         if (p_lista->codigos_numerador != NULL)
             //printf("%s", p_lista->codigos_numerador);
@@ -1706,7 +1560,6 @@ void print_monomio(char *monomio, tabela_literais *tabela)
     
 }
 
-
 // função que agrupa elementos iguais da expressão expandida
 lista_expr *simplifica_expr_expandida(lista_expr *p_lista)
 {
@@ -1745,18 +1598,9 @@ lista_expr *simplifica_expr_expandida(lista_expr *p_lista)
                     //inicializar a variavel de resultado
                     resultado = 0.0;
                     //somar ou subtrair o primeiro termo
-                    /* if (p_1->sinal == operador_mais)
-                     resultado+= p_1->parametro;
-                     else
-                     resultado-= p_1->parametro;*/
-                    
                     resultado+= p_1->parametro;
-                    //somar ou subtrair o segundo termo 
-                    /*if (p_2->sinal == operador_mais)
-                     resultado+= p_2->parametro;
-                     else
-                     resultado-= p_2->parametro;*/
                     
+                    //somar ou subtrair o segundo termo 
                     resultado+= p_2->parametro;
                     
                     //BUG: arredondar quando o resultado é residual.Por exemplo, 0.9 - 0.9 = 11.1E-15
@@ -1765,12 +1609,6 @@ lista_expr *simplifica_expr_expandida(lista_expr *p_lista)
                         resultado = 0.0;
                     //guardar o resultado em p_1 sem sinal
                     p_1->parametro = resultado;
-                    
-                    //avaliar o sinal
-                    /* if (resultado >= 0)
-                     p_1->sinal = operador_mais;
-                     else
-                     p_1->sinal = operador_menos;*/
                     
                     //ja atualiza p_2
                     p_remove = p_2;
@@ -1824,7 +1662,6 @@ lista_expr *simplifica_expr_expandida(lista_expr *p_lista)
         else
             p_1 = p_1->proximo; //nao é zero
     }
-    
     return p_inicio;
 }
   
@@ -1907,8 +1744,6 @@ lista_expr *copia_lista_expr(lista_expr *lista)
     if (lista->codigos_denominador != NULL) 
     {
         //TODO controle de erro
-        //p_lista->codigos_denominador = (char *)malloc((strlen(lista->codigos_denominador)+1)*sizeof(char));
-        //strcpy(p_lista->codigos_denominador, lista->codigos_denominador);
         p_lista->codigos_denominador = copia_lista_expr(lista->codigos_denominador);
     }
     else
@@ -1976,7 +1811,6 @@ lista_expr *lexdegbubblesort(lista_expr *poly)
     {
         poly = poly->anterior;
     }
-    
     return poly;
 }
 
@@ -2080,10 +1914,9 @@ int lexdeg(char *primeiro, char *segundo)
             return(0);
             //erro 
         }
-        
     }
-    
 }
+
 //funcao que realiza a divisao polinomial.
 int polydiv(lista_expr *dividendo, lista_expr *divisor, lista_expr **quociente, lista_expr **resto)
 {
@@ -2203,9 +2036,7 @@ int polydiv(lista_expr *dividendo, lista_expr *divisor, lista_expr **quociente, 
                 resultado_monomio->anterior = poly_ptr;
                 resultado_monomio->proximo = NULL;
             }
-            
         }
-
     }
     
     //ao final da divisão, reordenar e simplificar o quociente e o resto
@@ -2261,7 +2092,6 @@ void subtrai_expr(lista_expr **no_esq, lista_expr *no_dir)
         
         poly_ptr = poly_ptr->proximo;
     }
-    
     //aponta para o final da lista do no esquerdo
     if (*no_esq != NULL) 
     {
@@ -2281,9 +2111,6 @@ void subtrai_expr(lista_expr **no_esq, lista_expr *no_dir)
     {
         *no_esq = no_dir;
     }
-    
-    
-    
 }
 
 //função que soma duas expressões
@@ -2409,10 +2236,8 @@ lista_expr *divide_monomio(lista_expr *dividendo, lista_expr *divisor)
                     //o parametro resultante deverá ser 0
                     div_parametros = 0.0;
                 }
-                
             }
         }
-
     }
     
     //com todas as possibilidades cobertas, basta alocar a memoria para o monomio resultante e preencher a estrutura
@@ -2423,16 +2248,8 @@ lista_expr *divide_monomio(lista_expr *dividendo, lista_expr *divisor)
     div_monomio->codigos_denominador = NULL;
     div_monomio->codigos_numerador = div_string;
     div_monomio->parametro = div_parametros;
-    
-    
-    //encontra o sinal
-   /* if (dividendo->sinal != divisor->sinal)
-        div_monomio->sinal = operador_menos;
-    else
-        div_monomio->sinal = operador_mais;*/
-    
+
     return div_monomio;
-        
 }
 
 lista_expr *constroi_elemento_zerado(void)
@@ -2719,7 +2536,6 @@ lista_expr *substitui_var(lista_expr *p_destino, lista_expr *p_fonte, char commo
                     str_ptr++;
                 }
                 
-                
                 //inicialização de ponteiros
                 lista_ptr1 = NULL;
                 lista_ptr2 = NULL;
@@ -2839,18 +2655,11 @@ vetor_polinomios *gera_vetor(vetor_polinomios *ultimo_gerado, lista_expr *polino
                     elemento_atual->proximo_polinomio = NULL;
                     elemento_atual->polinomio_anterior = NULL;
                 }
-                
-                
             }
-            
             return ultimo_gerado;
         }
-        
-        
     }
-    
     return ultimo_gerado;
-        
 }
 
 vetor_polinomios *elimina_zero(vetor_polinomios *lista)
@@ -2872,9 +2681,7 @@ vetor_polinomios *elimina_zero(vetor_polinomios *lista)
         
         //incrementa a busca
         p_lista = p_lista->proximo_polinomio;
-            
     }
-    
     //se nada encontrou, retorna o inicio da lista
     return lista;
 }
@@ -2913,7 +2720,6 @@ vetor_polinomios *remove_polinomio(vetor_polinomios *elemento)
     {
         return esq;
     }
-        
 }
 
 //retorna o anterior, pois pode ser que remova o primeiro elemento
@@ -3044,7 +2850,6 @@ vetor_polinomios *remove_polinomios_negativos (vetor_polinomios *vetor_entrada)
         percorre_vetor = percorre_vetor->polinomio_anterior;
     }
     
-    
     return percorre_vetor;
 }
 
@@ -3054,7 +2859,6 @@ vetor_polinomios *remove_polinomios_redundantes (vetor_polinomios *vetor_entrada
     lista_expr *expr1, *expr2, *Q, *R;
     
     int flag = 0;
-  //  int bogus;
     
     //inicializo o ponteiro de varredura
     p_vetor1 = vetor_entrada;
@@ -3104,7 +2908,6 @@ vetor_polinomios *remove_polinomios_redundantes (vetor_polinomios *vetor_entrada
                     //p_vetor1 apontará para o proximo da lista apos ser removido
                     p_vetor2 = remove_polinomio(p_vetor2);
                 }
-                
             }
             
             //destruo expr
@@ -3128,7 +2931,6 @@ vetor_polinomios *remove_polinomios_redundantes (vetor_polinomios *vetor_entrada
                 p_vetor1 = p_vetor1->proximo_polinomio;
             else
                 break;
-            
         }
     } 
     
@@ -3137,7 +2939,6 @@ vetor_polinomios *remove_polinomios_redundantes (vetor_polinomios *vetor_entrada
     {
         p_vetor1 = p_vetor1->polinomio_anterior;
     }
-    
     
     return p_vetor1;
 }
@@ -3165,7 +2966,6 @@ int deg(lista_expr *poly_in)
     }
     
     return grau_max;
-    
 }
 
 vetor_sementes *gera_vetor_semente(vetor_polinomios *vetor_in, lista_expr *eq_entrada)
@@ -3249,7 +3049,6 @@ vetor_sementes *gera_vetor_semente(vetor_polinomios *vetor_in, lista_expr *eq_en
     
     //retorna o vetor gerado
     return vetor_gerado;
-    
 }
 
 //cria elemento de vetor de sementes
@@ -3286,7 +3085,6 @@ void destroi_lista_sementes(vetor_sementes *entrada)
     destroi_lista_expr_expandida(entrada->R1);
     destroi_lista_expr_expandida(entrada->R2);
     free(entrada);
-    
 }
 
 
@@ -3347,7 +3145,6 @@ void insere_polinomio(vetor_polinomios **vetor,polinomio *elemento)
         p_vetor->proximo_polinomio = novo_poly;
         novo_poly->polinomio_anterior = p_vetor;
     }
-    
 }
 
 
@@ -3467,8 +3264,6 @@ int prova_real(vetor_decomp *decomp, lista_expr *eq_entrada)
                 flag_teste = 1;
                 destroi_lista_expr_expandida(Q);
                 destroi_lista_expr_expandida(R);
-
-                
             }
         }
         else
@@ -3517,7 +3312,6 @@ int prova_real(vetor_decomp *decomp, lista_expr *eq_entrada)
             {
                 destroi_lista_expr_expandida(Q);
                 destroi_lista_expr_expandida(R);
-
             }
         }
         Q = NULL;
@@ -3536,7 +3330,6 @@ int prova_real(vetor_decomp *decomp, lista_expr *eq_entrada)
         return FALSE;
     }
     
-
     //multiplico a parte par pelo lambda ímpar
     acum = multiplica_expr(acum_par,decomp->resto_impar);
     destroi_lista_expr_expandida(acum_par);
@@ -3584,24 +3377,6 @@ int prova_real(vetor_decomp *decomp, lista_expr *eq_entrada)
         destroi_lista_expr_expandida(acum);
         return FALSE;
     }
-    
-  /*  //subtraio o resultado da equação de entrada
-    eq_entrada_copia = copia_lista_expr(eq_entrada);
-    
-    subtrai_expr(&acum_impar, eq_entrada_copia);
-    
-    //simplifica 
-    acum = simplifica_expr_expandida(acum_impar);
-    destroi_lista_expr_expandida(acum_impar);
-    acum_impar = acum;
-    
-    //se o resultado for 0 deu certo
-    if(acum_impar->codigos_numerador == NULL && acum_impar->parametro == 0.0 && acum_impar->proximo == NULL)
-        return TRUE;
-    else 
-        return FALSE;
-   */
-    
 }
 
 //insere uma lista de decomposicoes dentro de outra, retornando um ponteiro para o final dela
@@ -3746,8 +3521,6 @@ vetor_decomp *copia_semente(vetor_sementes *entrada)
     ptr_decomp->ant_decomp = NULL;
     ptr_decomp->prox_decomp = NULL;
     
-    
-    
     return ptr_decomp;
 }
 
@@ -3780,7 +3553,6 @@ vetor_decomp *copia_decomp(vetor_decomp *entrada)
     nova_decomp->prox_decomp = NULL;
     
     return nova_decomp;
-
 }
 
 int decomp_size(vetor_decomp *entrada)
@@ -3843,7 +3615,6 @@ int expr_size(lista_expr *entrada)
     }
     
     return count;
-    
 }
 
 
@@ -3871,23 +3642,6 @@ void encontra_decomp_recursiva(vetor_decomp *primario, vetor_decomp *secundario,
     //vou tentar combinar o primario com TODOS os elementos do secundário
     while (ptr_sementes != NULL)
     {
-        if (primario->poly_impares->polinomio->id == 1)
-            if (primario->poly_impares->proximo_polinomio != NULL)
-                if(primario->poly_impares->proximo_polinomio->polinomio->id == 1)
-                    if (primario->poly_impares->proximo_polinomio->proximo_polinomio != NULL)
-                        if (primario->poly_impares->proximo_polinomio->proximo_polinomio->polinomio->id == 1)
-                            if (primario->poly_impares->proximo_polinomio->proximo_polinomio->proximo_polinomio != NULL)
-                                if (primario->poly_impares->proximo_polinomio->proximo_polinomio->proximo_polinomio->polinomio->id == 3)
-                                    if (primario->poly_pares->polinomio->id == 1 &&
-                                        primario->poly_pares->proximo_polinomio->polinomio->id == 1 &&
-                                        primario->poly_pares->proximo_polinomio->proximo_polinomio->polinomio->id == 6 &&
-                                        primario->poly_pares->proximo_polinomio->proximo_polinomio->proximo_polinomio->polinomio->id == 6)
-                                        {
-                                            if (ptr_sementes->poly_impares->polinomio->id == 3 && ptr_sementes->poly_pares->polinomio->id == 6)
-                                            {
-                                                ;
-                                            }
-                                        }
         //pula este bloco na primeira passada
         if (!flag_first)
         {
@@ -3987,8 +3741,6 @@ void encontra_decomp_recursiva(vetor_decomp *primario, vetor_decomp *secundario,
                                 (*total_decomp)++;
                                 //sinalizo o flag de que nao é necessário fazer o teste invertido
                                 flag_continue = 1;
-                                
-                                
                             }
                             else
                                 destroi_decomp(decomp_atual);
@@ -4022,7 +3774,6 @@ void encontra_decomp_recursiva(vetor_decomp *primario, vetor_decomp *secundario,
                         ptr_sementes = ptr_sementes->prox_decomp;
                         continue;
                     }
-                    
                 }
                 else
                 {
@@ -4164,7 +3915,6 @@ void encontra_decomp_recursiva(vetor_decomp *primario, vetor_decomp *secundario,
                 }
                 else
                 {
-                    
                     //caso contrario, deve-se proceder com a decomposicao recursivamente
                     encontra_decomp_recursiva(decomp_atual, ptr_sementes, retorno, grau, expr_simplificada,lista_literais, total_decomp);
                     
@@ -4184,7 +3934,6 @@ void encontra_decomp_recursiva(vetor_decomp *primario, vetor_decomp *secundario,
                 destroi_lista_expr_expandida(Q);
                 
             }
-            
         }
         else
         {
@@ -4202,7 +3951,6 @@ void encontra_decomp_recursiva(vetor_decomp *primario, vetor_decomp *secundario,
         //atualiza o ponteiro
         ptr_sementes = ptr_sementes->prox_decomp;
     }
-    
 }
 
 //funcao que elimina as decomp redundantes nao previsiveis
@@ -4315,22 +4063,6 @@ void imprime_decomposicao(vetor_decomp *decomposicao, tabela_literais *lista_lit
         printf(")");
         percorre_polinomios = percorre_polinomios->proximo_polinomio;
     }
- /*
-    //imprimir os ids dos polinomios
-    percorre_polinomios = decomposicao->poly_impares;
-    while (percorre_polinomios!= NULL) 
-    {
-        printf(" %d",percorre_polinomios->polinomio->id);
-        percorre_polinomios = percorre_polinomios->proximo_polinomio;
-    }
-    
-    printf(" ;");
-    percorre_polinomios = decomposicao->poly_pares;
-    while (percorre_polinomios!= NULL) 
-    {
-        printf(" %d",percorre_polinomios->polinomio->id);
-        percorre_polinomios = percorre_polinomios->proximo_polinomio;
-    } */
 }
 
 //funcao que retorna 1 caso as decomposicoes sejam equivalentes e 0 caso nao sejam
@@ -4553,7 +4285,7 @@ vetor_polinomios *remove_polinomios_nao_pertencentes(vetor_decomp *lista_decomp,
 }
 
 //função que implementa a decomposição em si - versao recursiva
-/*vetor_decomp *encontra_decomp_mulder(vetor_polinomios *entrada, int grau, lista_expr *expr_simplificada, tabela_literais *lista_literais)
+vetor_decomp *encontra_decomp_mulder(vetor_polinomios *entrada, int grau, lista_expr *expr_simplificada, tabela_literais *lista_literais)
 {
     vetor_polinomios *primario_ptr, *secundario_ptr; //ponteiro para os loops internos
     
@@ -4645,7 +4377,7 @@ vetor_polinomios *remove_polinomios_nao_pertencentes(vetor_decomp *lista_decomp,
     //retornar
     return lista_decomp;
 }
-*/
+
 void combina_decomp_mulder(vetor_decomp_simple *decomp_impares, vetor_decomp_simple *decomp_pares, polinomio *base_par, polinomio *base_impar, lista_expr *expr_simplificada, vetor_decomp **lista_decomp, int *total_decomp, tabela_literais *lista_literais)
 {
     vetor_decomp *decomp_atual, *ptr_decomp;
@@ -4852,16 +4584,12 @@ void encontra_decomp_parcial(vetor_decomp_simple *poly_acumulados, polinomio *ba
                     destroi_decomp_simples(decomp_atual);
                     decomp_atual = NULL;
                 }
-                
             }
-
         }
     
         //incrementa o ponteiro
         ptr_polinomios = ptr_polinomios->proximo_polinomio;
     }
-    
-    
 }
 
 
@@ -4973,215 +4701,7 @@ void destroi_vetor_decomp_simples(vetor_decomp_simple *entrada)
     
     destroi_decomp_simples(entrada);
 }
-
-//funções do algoritmo de corre;lação
-vetor_correlacao_direta *constroi_correlacao_direta(vetor_sementes *entrada)
-{
-    vetor_sementes *p_entrada = entrada;
-    int id_atual = -1; //todos os id's sao positivos, então este valor é so para disparar a primeira entrada
-    int ultimo_id = -1;
-    int outro_id;
-    vetor_correlacao_direta *correlacao_atual = NULL;
-    
-    if (entrada == NULL)
-    {
-        return NULL;
-    }
-    
-    //percorrer o vetor inteiro
-    while (1)
-    {
-        //assumindo que o vetor já está ordenado, grava omenor dos ids
-        if (p_entrada->P1.id < p_entrada->P2.id)
-        {
-            id_atual = p_entrada->P1.id;
-            outro_id = p_entrada->P2.id;
-        }
-        else
-        {
-            id_atual = p_entrada->P2.id;
-            outro_id = p_entrada->P1.id;
-        }
-        
-        //compara com o ultimo_id. caso negativo, criar um elemento novo de correlação
-        if (id_atual != ultimo_id)
-        {
-            //se for a primiera passagem, correlacao atual nao existe
-            if (correlacao_atual != NULL)
-            {
-                correlacao_atual->prox_corr = novo_vetor_correlacao_direta();
-                correlacao_atual->prox_corr->ant_corr = correlacao_atual;
-                correlacao_atual = correlacao_atual->prox_corr;
-            }
-            else
-            {
-                correlacao_atual = novo_vetor_correlacao_direta();
-            }
-            
-            //popular o vetor
-            //reutiliza a variável id_atual para pegar o id do outro polinomio
-            correlacao_atual->id_polinomio_base = id_atual;
-            
-            //atualiza os ids
-            ultimo_id = id_atual;
-        }
-        
-        
-        //insere o outro lista de polinomios correlatos
-        insere_id_polinomios_correlatos(correlacao_atual, outro_id);
-        
-        
-        //atualiza o ponteiro
-        if (p_entrada->conjunto_prox!= NULL)
-        {
-            p_entrada = p_entrada->conjunto_prox;
-        }
-        else
-        {
-            break;
-        }
-        
-    }
-    //rebobinar as correlações encontradas
-    while (correlacao_atual->ant_corr != NULL)
-    {
-        correlacao_atual = correlacao_atual->ant_corr;
-    }
-    
-    return correlacao_atual;
-}
-
-vetor_correlacao_direta *novo_vetor_correlacao_direta(void)
-{
-    vetor_correlacao_direta *novo;
-    
-    novo = (vetor_correlacao_direta *)malloc(sizeof(vetor_correlacao_direta));
-    novo->ant_corr = NULL;
-    novo->prox_corr = NULL;
-    novo->id_polinomio_base = -1;
-    novo->poly_correlatos = NULL;
-    
-    return novo;
-}
-
-void insere_id_polinomios_correlatos(vetor_correlacao_direta *correlacao_atual, int outro_id)
-{
-    vetor_id_polinomios *novo;
-    vetor_id_polinomios *p_polinomios;
-    
-    novo = (vetor_id_polinomios *)malloc(sizeof(vetor_id_polinomios));
-    novo->id_polinomio = outro_id;
-    novo->ant_poly = NULL;
-    novo->prox_poly = NULL;
-    
-    //insere na lista
-    if (correlacao_atual->poly_correlatos == NULL)
-    {
-        correlacao_atual->poly_correlatos = novo;
-    }
-    else
-    {
-        p_polinomios = correlacao_atual->poly_correlatos;
-        while (p_polinomios->prox_poly != NULL)
-        {
-            p_polinomios = p_polinomios->prox_poly;
-        }
-        p_polinomios->prox_poly = novo;
-    }
-}
-
-void imprime_correlacoes_diretas(vetor_correlacao_direta *entrada)
-{
-    vetor_correlacao_direta *p_correlacoes = entrada;
-    vetor_id_polinomios *p_polinomios;
-    
-    printf("\n Imprimindo as correlacoes diretas entre polinomios...\n");
-    while (p_correlacoes != NULL)
-    {
-        printf("\n%d:\t",p_correlacoes->id_polinomio_base);
-        p_polinomios = p_correlacoes->poly_correlatos;
-        while (p_polinomios != NULL)
-        {
-            printf("%d, ",p_polinomios->id_polinomio);
-            p_polinomios = p_polinomios->prox_poly;
-        }
-        
-        p_correlacoes = p_correlacoes->prox_corr;
-    }
-    
-}
-vetor_sementes *ordena_vetor_semente(vetor_sementes *entrada)
-{
-    //ordenação formato buuble sort
-    vetor_sementes *p_atual, *p_troca;
-    int menor_atual, menor_troca;
-    int flag_troca = 0;
-    
-    p_atual = entrada;
-    if (p_atual == NULL)
-    {
-        return NULL;
-    }
-    //percorre a lista de polinomios e troca os elementos 1 a 1 quando for necessario. Só para quando a percorrer o polinomio inteiro e não fizer troca alguma
-    do
-    {
-        //reseta o flag de flag_troca
-        flag_troca = 0;
-        //rebobina para o inicio do polinomio
-        while (p_atual->conjunto_ant != NULL)
-            p_atual = p_atual->conjunto_ant;
-        //percorre a lista
-        while (p_atual->conjunto_prox != NULL)
-        {
-            p_troca = p_atual->conjunto_prox;
-            //escolhe os menores índices de cada vetor
-            if (p_atual->P1.id < p_atual->P2.id)
-                menor_atual = p_atual->P1.id;
-            else
-                menor_atual = p_atual->P2.id;
-            
-            if (p_troca->P1.id < p_troca->P2.id)
-                menor_troca = p_troca->P1.id;
-            else
-                menor_troca = p_troca->P2.id;
-            
-            //compara dois vetores_semente adjacentes. Se algum dos id's do atual for maior que o id da troca, trocar os elementos de lugar
-            if (menor_atual > menor_troca )
-            {
-                //sinaliza que houve troca
-                flag_troca = 1;
-                //realiza a troca
-                //ajusta os ponteiros de borda
-                p_atual->conjunto_prox = p_troca->conjunto_prox;
-                if (p_atual->conjunto_prox != NULL)
-                    p_atual->conjunto_prox->conjunto_ant = p_atual;
-                
-                p_troca->conjunto_ant = p_atual->conjunto_ant;
-                if(p_troca->conjunto_ant != NULL)
-                    p_troca->conjunto_ant->conjunto_prox = p_troca;
-                
-                //ajusta os ponteiros entre p_atual e p_troca
-                p_troca->conjunto_prox = p_atual;
-                p_atual->conjunto_ant = p_troca;
-            }
-            else
-                p_atual = p_atual->conjunto_prox;;
-        }
-    }while (flag_troca == 1);
-    
-    //recuperar o inicio do polinomio
-    while (p_atual->conjunto_ant != NULL)
-    {
-        p_atual = p_atual->conjunto_ant;
-    }
-    
-    return p_atual;
-}
-
 //funções para medição de tempo
-
-
-
 void inicia_cronometro(time_t *medidor)
 {
     *medidor = time(NULL);
@@ -5208,8 +4728,7 @@ void para_cronometro(time_t *medidor)
     printf("\ntime elapsed: %lu days, %lu hours, %lu minutes, %lu seconds",dias,horas,minutos,segundos);
 }
 
-
-vetor_decomp *encontra_decomp_mulder(vetor_polinomios *entrada, int grau, lista_expr *expr_simplificada, tabela_literais *lista_literais)
+vetor_decomp *encontra_decomp_mulder_safe(vetor_polinomios *entrada, int grau, lista_expr *expr_simplificada, tabela_literais *lista_literais)
 {
     vetor_polinomios *primario_ptr, *secundario_ptr; //ponteiro para os loops internos
     
@@ -5328,7 +4847,6 @@ void encontra_decomp_parcial_primaria(vetor_decomp_simple *poly_acumulados, poli
                     //terminou de fazer uma decomposição parcial, começar a procurar decomposições parciais no outro vetor
                     encontra_decomp_parcial_secundaria(NULL,base_secundario, resto_secundario, lista_polinomios, grau, retorno, decomp_atual, base_primario, total_decomp,lista_literais,eq_entrada);
                     //aqui todas as decomposições terão sido inseridas dentro sda rotina da secundaria
-                    //*retorno = insere_decomp_simples(*retorno, decomp_atual);
                     //destroi o vetor simple primario
                     destroi_decomp_simples(decomp_atual);
                     
